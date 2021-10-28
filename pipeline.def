@@ -1,0 +1,38 @@
+Bootstrap: docker
+From: continuumio/miniconda3
+	
+%post
+	apt-get update
+	apt-get -y install software-properties-common wget build-essential libssl-dev
+        conda config --add channels defaults
+        conda config --add channels bioconda
+        conda config --add channels conda-forge
+	conda config --add channels nvidia
+	conda install -c anaconda cmake
+	apt -y install python3-pip
+	apt -y install gfortran
+	pip3 install --upgrade setuptools
+	conda install pandas matplotlib scipy seaborn scikit-learn
+	conda install -c bioconda gfapy ncbi-genome-download
+	conda install -c conda-forge biopython
+	conda install pyseer
+	conda install unitig-caller
+        conda install -c conda-forge jupyterlab
+	apt-get -y install zlib1g
+	apt-get -y install zlib1g-dev
+	pip3 install https://github.com/broadinstitute/pyfrost/releases/download/v0.1.0b1/pyfrost-0.1.0b1.tar.gz
+	conda install pytorch torchvision torchaudio cudatoolkit=11.1 -c pytorch -c nvidia
+	conda install pyg -c pyg -c conda-forge
+	pip3 install 'numpy==1.19.2' --force-reinstall
+
+%files
+    /home/liam/BlastFrost /opt
+    /home/liam/bifrost /opt
+	
+%test
+    grep -q NAME=\"Ubuntu\" /etc/os-release
+    if [ $? -eq 0 ]; then
+        echo "Container base is Ubuntu as expected."
+    else
+        echo "Container base is not Ubuntu."
+    fi
