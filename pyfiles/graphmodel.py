@@ -56,6 +56,21 @@ class SAGPool(torch.nn.Module):
 
     def __repr__(self):
         return self.__class__.__name__
+
+def model_forward(node_mask, data, model):
+    integrated = Data(x=node_mask, edge_index=data.edge_index, y=data.y, batch=data.batch, ptr = data.ptr, graphind = data.graphind)
+    out = model(integrated)
+    return out
+
+def explain(data, model, target=0):
+    input_mask = torch.ones((data.x.shape[0],data.x.shape[1])).to(device)
+    input_mask = torch.tensor(input_mask)
+    ig = IntegratedGradients(model_forward)
+    mask = ig.attribute(input_mask, target=data.y[0],additional_forward_args=(data,model,),internal_batch_size=1)
+    node_mask = np.abs(mask.cpu().detach().numpy())
+    if node_mask.max() > 0:
+        node_mask = node_mask / node_mask.max()
+    return node_mask
     
 def build(datadir):
     splits = np.load(datadir + '/processed_data/foldsplits.npy', allow_pickle=True)
@@ -82,25 +97,54 @@ def build(datadir):
     final_labels = []
     final_train = []
     final_train_y = []
-    
     for fold in range(5):
+        class_dist = {}
         donegraphs = torch.load(datadir + '/processed_data/fold' + str(fold+1) + 'dataset.pkl')
         model = SAGPool(6, 512, enc)
         train_data = []
         test_data = []
+        meli = []
+        presmatrix = []
+        meligraphinds = []
+        for ind in range(len(splits[1][fold])):
+            if specdict[species[splits[1][fold][ind]]] == 0:
+                meligraphinds.append(ind)
         for g in donegraphs:
+            if g.y.item() not in class_dist:
+                class_dist[g.y.item()] = 1
+            else:
+                class_dist[g.y.item()] += 1
             if int(g.graphind) in splits[0][fold]:
                 train_data.append(g)
             else:
                 if g.y.item() == 0:
                     meli.append(g)
                 test_data.append(g)
+        ind = 0
+        for g in meli:
+            pos,neg = 0,0
+            presmatrix.append([])
+            for node in range(len(g.x)):
+                for posind in meligraphinds:
+                    if g.x[node][posind].item() == 0:
+                        neg += 1
+                    else:
+                        pos += 1
+                if pos >= neg:
+                    presmatrix[ind].append(1)
+                else:
+                    presmatrix[ind].append(0)
+            g.meli = presmatrix[ind]
+            #print(presmatrix[ind])
+            ind += 1
+        print(class_dist)
         train_loader = DataLoader(train_data, batch_size=1)
         test_loader = DataLoader(test_data, batch_size=1)
+        expl_loader = DataLoader(meli, batch_size=1)
         device = torch.device('cuda')
         model = model.to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
-        for epoch in range(200):
+        for epoch in range(100):
             model.train()
             loss_all = 0
             for d in train_loader:
@@ -112,13 +156,46 @@ def build(datadir):
                 loss_all += loss.item()
                 optimizer.step()
             print("EPOCH #%i  FOLD#%i  LOSS:%i" % (epoch+1,fold+1, loss_all))
+            
+            
+        model.eval()
+        for d in expl_loader:
+            d = d.to(device)
+            expl = explain(d, model)
+            importance = np.zeros(expl.shape[0])
+            maximp = 0
+            maxind = 0
+            for node in range(len(expl)):
+                importance[node] = np.sum(expl[node])
+                if importance[node] > maximp:
+                    maximp = importance[node]
+                    maxind = node
+            #print(d.graphind)
+            #print(d.y)
+            count = 0
+            seqs = []
+            with open(datadir + '/processed_data/fasta/graph' + str(d.graphind.item()) + '.fasta') as f:
+                for l in f:
+                    if count % 2 != 0:
+                        seqs.append(str.rsplit(l)[0])
+                    count += 1
+         
+            print("HIGHEST IMPORTANCE SEQUENCE")
+            print(maxind)
+            print(d.meli[maxind].item())
+            print(seqs[maxind])
+                
         final_models.append(model)
+
         final_features.append(test_loader)
         final_train.append(train_loader)
+
+    print(specdict)
     print("TRAINING DONE")
-    
     ind = 0
     for m, xtest in zip(final_models, final_features):
+        
+        wrongdict = {}
         print("TESTING FOLD#%i" % (ind+1))
         ind +=1
         model.eval()
@@ -132,7 +209,13 @@ def build(datadir):
             pred = m(d)
             pred = pred.max(dim=1)[1]
             ypred.append(pred[0].item())
-
+            if pred[0].item() != d.y[0].item():
+                if d.y[0].item() not in wrongdict:
+                    wrongdict[d.y[0].item()] = 1
+                else:
+                    wrongdict[d.y[0].item()] += 1
+            #print("HIGHEST:%i vs. ACTUAL:%i" % (pred,d.y[0]))
+            correct += pred.eq(d.y).sum().item()
         accuracy = accuracy_score(ytrue, ypred)
         prec_recall = precision_recall_fscore_support(ytrue,ypred)
         prec_recall = np.transpose(prec_recall)
@@ -142,3 +225,5 @@ def build(datadir):
         prec_recall.to_csv(model_report)
         print(prec_recall)
         print("Accuracy: %f" % (accuracy))
+        print("Correct:#%i" %  correct)
+        print("Total#%i" % len(xtest.dataset))

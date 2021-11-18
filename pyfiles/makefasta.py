@@ -25,4 +25,19 @@ def create(datadir):
                         w.write(seq + '\n')
                         w.write(temp[2] + '\n')
                         ind += 1
+    for ind in range(50):
+        openpth = datadir + '/processed_data/unknown/unknown' + str(ind) + '.gfa'
+        writepth = datadir + '/processed_data/unknown/unknown' + str(ind) + '.fasta'
+        if os.path.isfile(writepth):
+            continue
+        with open(openpth, 'r') as f:
+            lineind = 0
+            with open(writepth, 'w') as w:
+                for l in f:
+                    temp = str.rsplit(l)
+                    if temp[0] == 'S':
+                        seq = '>' + str(lineind)
+                        w.write(seq + '\n')
+                        w.write(temp[2] + '\n')
+                        lineind += 1
     return datadir

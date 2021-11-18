@@ -36,7 +36,7 @@ def get_kmer_counts(filename, num_cols, col_index, datadir):
     genome_row : Completed feature row of kmer counts for input sample
 
     """
-
+    #count each kmer that exists, look into jellyfish doing this for us, collect the highest freq kmers?
     genome_row = np.zeros((num_cols), dtype=np.dtype('uint32'))
     append = datadir + filename
     #Same method used in Computational-pathogens/acheron
@@ -46,7 +46,7 @@ def get_kmer_counts(filename, num_cols, col_index, datadir):
             kmercount = int(kmercount)
             seq = record.seq
             seq = str(seq)
-            if len(seq) < 11:
+            if len(seq) < 31:
                 print("Invalid key: %s" % (seq))
                 print(filename)
             index = col_index[seq]
@@ -78,7 +78,22 @@ def build_matrix(datadir, filename = '/processed_data/cleanwcounts.csv'):
     files_path = datadir + filename
     i = 0
     files = get_file_names(files_path)
-    for seq in itertools.product(chars, repeat=11):
+    isnum = 0
+    for f in files:
+        with open(datadir + f, 'r') as counts:
+            isnum = 0
+            for l in counts:
+                if isnum % 2 != 0:
+                    seq = str.rsplit(l)[0]
+                    rev = Seq.reverse_complement(seq)
+                    if seq > rev:
+                        seq = rev
+                    if seq not in cols:
+                        cols[seq] = i
+                        i += 1
+                isnum += 1
+    """         
+    for seq in itertools.product(chars, repeat=31):
         dna = "".join(seq)
         rev = Seq.reverse_complement(dna)
         if dna > rev:
@@ -86,7 +101,7 @@ def build_matrix(datadir, filename = '/processed_data/cleanwcounts.csv'):
         if not dna in cols:
             cols[dna] = i
             i += 1
-            
+    """
     x = np.asarray(files)
     numcols = i
     numrows = len(x)

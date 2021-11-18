@@ -26,4 +26,14 @@ def query(datadir):
         full = cmd + pths + flags
         if pths != "":
             os.system(full)
+        pths = ""
+        for g in range(50):
+            if os.path.isfile(datadir + '/processed_data/unknown/fold' + str(x+1) + '/unknown_graph_unknown' + str(g) + '.fasta.search'):
+                continue
+            pths += ('-q ' + datadir + '/processed_data/unknown/unknown' + str(g) + '.fasta ')
+        cmd = '/home/liam/BlastFrost/build/BlastFrost -g ' + datadir + '/processed_data/fold' + str(x+1) + '.gfa -f ' + datadir + '/processed_data/fold' + str(x+1) + '.bfg_colors '
+        flags = '-o ' + datadir + '/processed_data/unknown/fold' + str(x+1) + '/unknown_graph -d -t 128 -s 5.1 -v'
+        full = cmd + pths + flags
+        if pths != "":
+            os.system(full)   
     return datadir

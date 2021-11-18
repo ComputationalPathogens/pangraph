@@ -101,13 +101,18 @@ def clean_outliers(k, datadir, filename = '/processed_data/metadata.csv'):
     species = data2.species.tolist()
     labels = np.asarray(species)
     count = Counter(labels)
+    brucunknown = []
 
     for index, row in data2.iterrows():
+        if row['species'] == 'unknown' and row['genus'] == 'Brucella':
+            brucunknown.append(row['seqfile'])
         if count[row['species']] < 10 or row['species'] == 'unknown':
             data2.drop(index, axis=0, inplace=True)
     data2.reset_index(drop=True,inplace=True)
     newinds = []
-    
+    with open(datadir + '/processed_data/unknownset.txt', 'w') as f:
+        for file in brucunknown:
+            f.write(datadir + file + '\n')
     for x in range(len(data2.index)):
         newinds.append(x)
     newinds = {'id':newinds}

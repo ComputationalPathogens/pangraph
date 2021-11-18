@@ -85,16 +85,17 @@ def train_model(k, features, labels, unencoded_labels, save, datadir):
     params - model parameters
     save - true to save models, false if not saving, also saves test data fold for accompanying model
     """
-    params = {'objective':'multi:softmax', 'num_class': '11', 'max_depth': '2', 'eta':'0.1'}
+    params = {'objective':'multi:softmax', 'num_class': '11', 'max_depth': '12'}
     splits = np.load('/home/liam/compare/processed_data/foldsplits.npy', allow_pickle=True)
     count = 0
-    num_feats = 1000
+    num_feats = 2000000
     final_models = []
     final_features = []
     final_labels = []
     final_train = []
     final_train_y = []
     for x in range(5):
+        print(features.shape)
         count+=1
         sk_obj = SelectKBest(f_classif, k=num_feats)
         Xtrain,Xtest = features.iloc[splits[0][x]], features.iloc[splits[2][x]]
@@ -106,7 +107,7 @@ def train_model(k, features, labels, unencoded_labels, save, datadir):
         featmask = sk_obj.get_support()
         featnames = features.columns[featmask]
         xgb_matrix = xgb.DMatrix(Xtrain, label=Ytrain)
-        booster = xgb.train(params, xgb_matrix, 5)
+        booster = xgb.train(params, xgb_matrix)
         xgb_test = xgb.DMatrix(Xtest)
 
         final_models.append(booster)

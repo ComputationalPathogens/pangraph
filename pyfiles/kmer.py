@@ -20,7 +20,7 @@ def count_kmer(rootdir, ksize = 11, filename = '/processed_data/clean.csv'):
     #Could potentially be done with multiprocessing instead although this doesnt take much time anyway
     filepath = rootdir + filename
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
-    dumpname = 'mer_counts_dumps.fa'
+    dumpname = 'mer_counts_dumpsbf.fa'
 
     data = pd.read_csv(filepath, names=colnames)
     id = 0
@@ -39,7 +39,7 @@ def count_kmer(rootdir, ksize = 11, filename = '/processed_data/clean.csv'):
             except OSError:
                 pass
                 
-            merpth = rootdir + dirname + '/' + str(ksize) + '-mers/' + 'mer_counts.jf'
+            merpth = rootdir + dirname + '/' + str(ksize) + '-mers/' + 'mer_countsbf.jf'
             dumppth = rootdir + dirname + '/' + str(ksize) + '-mers/' + dumpname
             seqpth = rootdir + seqfile
             cntname = dirname + '/' + str(ksize) + '-mers/' + dumpname
@@ -47,7 +47,7 @@ def count_kmer(rootdir, ksize = 11, filename = '/processed_data/clean.csv'):
                 data.at[id,'cntfile'] = cntname
                 id = id + 1
                 continue
-            cmd = 'jellyfish count -m ' + str(ksize) + ' -s 100M -t 10 -C -o ' + merpth + ' ' + seqpth
+            cmd = 'jellyfish count -m ' + str(ksize) + ' -s 3G --bf-size 100G -t 16 -C -o ' + merpth + ' ' + seqpth
             cmd2 = 'jellyfish dump ' + merpth + ' > ' + dumppth
             os.system(cmd)
             os.system(cmd2)
