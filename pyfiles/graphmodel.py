@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import torch
 import torch.nn.functional as F
+from Bio import Seq, SeqIO
 from torch.nn import Linear
 from torch_geometric.nn import (GraphConv, SAGPooling, global_mean_pool, JumpingKnowledge)
 from torch_geometric.data import Data
@@ -72,15 +73,47 @@ def explain(data, model, target=0):
         node_mask = node_mask / node_mask.max()
     return node_mask
     
+def unitig_matrix(datadir, graphids):
+    unitigs = {}
+    for i in graphids:
+        with open(datadir + '/processed_data/fasta/graph' + str(i) + '.fasta', 'r') as file:
+            lnum = 0
+            for l in file:
+                
+                if lnum % 2 != 0:
+                    seq = str.rsplit(l)[0]
+                    rev = Seq.reverse_complement(seq)
+                    if seq > rev:
+                        seq = rev
+                    if seq not in unitigs:
+                        unitigs[seq] = 0
+                lnum += 1
+    return unitigs
+
 def build(datadir):
     splits = np.load(datadir + '/processed_data/foldsplits.npy', allow_pickle=True)
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
     samples = pd.read_csv(datadir + '/processed_data/clean.csv', names=colnames)
     species = samples.species.tolist()
+    graphids = samples.id.tolist()
     enc = 0
     indspec = {}
     specdict = {}
     labels_unencoded = []
+    baseunitigs = {}
+    for i in graphids:
+        with open(datadir + '/processed_data/fasta/graph' + str(i) + '.fasta', 'r') as file:
+            lnum = 0
+            for l in file:
+                if lnum % 2 != 0:
+                    seq = str.rsplit(l)[0]
+                    rev = Seq.reverse_complement(seq)
+                    if seq > rev:
+                        seq = rev
+                    if seq not in baseunitigs:
+                        baseunitigs[seq] = 0
+                lnum += 1
+    #TURN INTO HELPER FUNCTION IN DIFFERENT CLASS EVERYWHERE THIS EXISTS
     for s in set(species):
         labels_unencoded.append(s)
     labels_unencoded.sort()
@@ -97,33 +130,48 @@ def build(datadir):
     final_labels = []
     final_train = []
     final_train_y = []
+    final_unknown = []
+    meli_features = []
+    abor_features = []
+    suis_features = []
     for fold in range(5):
-        class_dist = {}
         donegraphs = torch.load(datadir + '/processed_data/fold' + str(fold+1) + 'dataset.pkl')
+        unknowngraphs = torch.load(datadir + '/processed_data/unknown/fold' + str(fold+1) + 'dataset.pkl')
         model = SAGPool(6, 512, enc)
         train_data = []
         test_data = []
         meli = []
-        presmatrix = []
+        abor = []
+        suis = []
+        melipresmatrix = []
+        aborpresmatrix = []
+        suispresmatrix = []
         meligraphinds = []
+        aborgraphinds = []
+        suisgraphinds = []
         for ind in range(len(splits[1][fold])):
-            if specdict[species[splits[1][fold][ind]]] == 0:
+            if specdict[species[splits[1][fold][ind]]] == 5:
                 meligraphinds.append(ind)
+            elif specdict[species[splits[1][fold][ind]]] == 0:
+                aborgraphinds.append(ind)
+            elif specdict[species[splits[1][fold][ind]]] == 8:
+                suisgraphinds.append(ind)
         for g in donegraphs:
-            if g.y.item() not in class_dist:
-                class_dist[g.y.item()] = 1
-            else:
-                class_dist[g.y.item()] += 1
             if int(g.graphind) in splits[0][fold]:
                 train_data.append(g)
             else:
-                if g.y.item() == 0:
-                    meli.append(g)
                 test_data.append(g)
+        for g in donegraphs:
+            if g.y.item() == 5:
+                meli.append(g)
+            elif g.y.item() == 0:
+                abor.append(g)
+            elif g.y.item() == 8:
+                suis.append(g)
         ind = 0
         for g in meli:
             pos,neg = 0,0
-            presmatrix.append([])
+            melipresmatrix.append([])
             for node in range(len(g.x)):
                 for posind in meligraphinds:
                     if g.x[node][posind].item() == 0:
@@ -131,16 +179,49 @@ def build(datadir):
                     else:
                         pos += 1
                 if pos >= neg:
-                    presmatrix[ind].append(1)
+                    melipresmatrix[ind].append(1)
                 else:
-                    presmatrix[ind].append(0)
-            g.meli = presmatrix[ind]
-            #print(presmatrix[ind])
+                    melipresmatrix[ind].append(0)
+            g.pres = melipresmatrix[ind]
             ind += 1
-        print(class_dist)
+        ind = 0
+        for g in abor:
+            pos,neg = 0,0
+            aborpresmatrix.append([])
+            for node in range(len(g.x)):
+                for posind in aborgraphinds:
+                    if g.x[node][posind].item() == 0:
+                        neg += 1
+                    else:
+                        pos += 1
+                if pos >= neg:
+                    aborpresmatrix[ind].append(1)
+                else:
+                    aborpresmatrix[ind].append(0)
+            g.pres = aborpresmatrix[ind]
+            ind += 1
+        ind = 0
+        for g in suis:
+            pos,neg = 0,0
+            suispresmatrix.append([])
+            for node in range(len(g.x)):
+                for posind in suisgraphinds:
+                    if g.x[node][posind].item() == 0:
+                        neg += 1
+                    else:
+                        pos += 1
+                if pos >= neg:
+                    suispresmatrix[ind].append(1)
+                else:
+                    suispresmatrix[ind].append(0)
+            g.pres = suispresmatrix[ind]
+            ind += 1
         train_loader = DataLoader(train_data, batch_size=1)
         test_loader = DataLoader(test_data, batch_size=1)
-        expl_loader = DataLoader(meli, batch_size=1)
+        meli_loader = DataLoader(meli, batch_size=1)
+        abor_loader = DataLoader(abor, batch_size=1)
+        suis_loader = DataLoader(suis, batch_size=1)
+        unknown_loader = DataLoader(unknowngraphs, batch_size=1)
         device = torch.device('cuda')
         model = model.to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
@@ -156,10 +237,9 @@ def build(datadir):
                 loss_all += loss.item()
                 optimizer.step()
             print("EPOCH #%i  FOLD#%i  LOSS:%i" % (epoch+1,fold+1, loss_all))
-            
-            
         model.eval()
-        for d in expl_loader:
+        for d in meli_loader:
+            unitigs = baseunitigs.copy()
             d = d.to(device)
             expl = explain(d, model)
             importance = np.zeros(expl.shape[0])
@@ -170,31 +250,130 @@ def build(datadir):
                 if importance[node] > maximp:
                     maximp = importance[node]
                     maxind = node
-            #print(d.graphind)
-            #print(d.y)
             count = 0
             seqs = []
             with open(datadir + '/processed_data/fasta/graph' + str(d.graphind.item()) + '.fasta') as f:
                 for l in f:
                     if count % 2 != 0:
-                        seqs.append(str.rsplit(l)[0])
+                        seq = str.rsplit(l)[0]
+                        rev = Seq.reverse_complement(seq)
+                        if seq > rev:
+                            seq = rev
+                        seqs.append(seq)
                     count += 1
-         
-            print("HIGHEST IMPORTANCE SEQUENCE")
-            print(maxind)
-            print(d.meli[maxind].item())
-            print(seqs[maxind])
+            for s in range(len(seqs)):
+                unitigs[seqs[s]] += importance[s]
+           # print("HIGHEST IMPORTANCE SEQUENCE")
+           # print(maxind)
+           # print(d.meli[maxind].item())
+           # print(seqs[maxind])
+        maximp = 0
+        maxseq = ''
+        for k in unitigs.keys():
+            if unitigs[k] > maximp:
+                maximp = unitigs[k]
+                maxseq = k
                 
+        print(maxseq)
+        print(Seq.reverse_complement(maxseq))
+        print(maximp)
+        meli_features.append(maxseq)
+        
+        for d in abor_loader:
+            unitigs = baseunitigs.copy()
+            d = d.to(device)
+            expl = explain(d, model)
+            importance = np.zeros(expl.shape[0])
+            maximp = 0
+            maxind = 0
+            for node in range(len(expl)):
+                importance[node] = np.sum(expl[node])
+                if importance[node] > maximp:
+                    maximp = importance[node]
+                    maxind = node
+            count = 0
+            seqs = []
+            with open(datadir + '/processed_data/fasta/graph' + str(d.graphind.item()) + '.fasta') as f:
+                for l in f:
+                    if count % 2 != 0:
+                        seq = str.rsplit(l)[0]
+                        rev = Seq.reverse_complement(seq)
+                        if seq > rev:
+                            seq = rev
+                        seqs.append(seq)
+                    count += 1
+            for s in range(len(seqs)):
+                unitigs[seqs[s]] += importance[s]
+           # print("HIGHEST IMPORTANCE SEQUENCE")
+           # print(maxind)
+           # print(d.meli[maxind].item())
+           # print(seqs[maxind])
+        maximp = 0
+        maxseq = ''
+        for k in unitigs.keys():
+            if unitigs[k] > maximp:
+                maximp = unitigs[k]
+                maxseq = k
+                
+        print(maxseq)
+        print(Seq.reverse_complement(maxseq))
+        print(maximp)
+        abor_features.append(maxseq)
+        
+        for d in suis_loader:
+            unitigs = baseunitigs.copy()
+            d = d.to(device)
+            expl = explain(d, model)
+            importance = np.zeros(expl.shape[0])
+            maximp = 0
+            maxind = 0
+            for node in range(len(expl)):
+                importance[node] = np.sum(expl[node])
+                if importance[node] > maximp:
+                    maximp = importance[node]
+                    maxind = node
+            count = 0
+            seqs = []
+            with open(datadir + '/processed_data/fasta/graph' + str(d.graphind.item()) + '.fasta') as f:
+                for l in f:
+                    if count % 2 != 0:
+                        seq = str.rsplit(l)[0]
+                        rev = Seq.reverse_complement(seq)
+                        if seq > rev:
+                            seq = rev
+                        seqs.append(seq)
+                    count += 1
+            for s in range(len(seqs)):
+                unitigs[seqs[s]] += importance[s]
+           # print("HIGHEST IMPORTANCE SEQUENCE")
+           # print(maxind)
+           # print(d.meli[maxind].item())
+           # print(seqs[maxind])
+        maximp = 0
+        maxseq = ''
+        for k in unitigs.keys():
+            if unitigs[k] > maximp:
+                maximp = unitigs[k]
+                maxseq = k
+                
+        print(maxseq)
+        print(Seq.reverse_complement(maxseq))
+        print(maximp)
+        suis_features.append(maxseq)
+            
         final_models.append(model)
 
         final_features.append(test_loader)
         final_train.append(train_loader)
+        final_unknown.append(unknown_loader)
 
     print(specdict)
+    with open(datadir + '/processed_data/meli_features.txt', 'w') as f:
+        for feat in meli_features:
+            f.write(feat + '\n')
     print("TRAINING DONE")
     ind = 0
-    for m, xtest in zip(final_models, final_features):
-        
+    for m, xtest, utest in zip(final_models, final_features, final_unknown):
         wrongdict = {}
         print("TESTING FOLD#%i" % (ind+1))
         ind +=1
@@ -202,6 +381,16 @@ def build(datadir):
         correct = 0
         ytrue = []
         ypred = []
+        upred = []
+        with open(datadir + '/processed_data/fold' + str(ind) + 'predicts.txt', 'w') as file:
+            for d in utest:
+                d = d.to(device)
+                m = m.to(device)
+                pred = m(d)
+                pred = pred.max(dim=1)[1]
+                upred.append(pred[0].item())
+                file.write(str(d.graphind.item()) + '\t' + str(pred[0].item()) + '\n')
+        print(upred)
         for d in xtest:
             ytrue.append(d.y[0].item())
             d = d.to(device)
