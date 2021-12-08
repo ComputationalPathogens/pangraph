@@ -73,8 +73,7 @@ def build_matrix(datadir, filename = '/processed_data/cleanwcounts.csv'):
     cols = {}
     rows = {}
     chars = "ACGT"
-    if os.path.isfile(datadir + '/processed_data/features.pkl'):
-        return datadir
+
     files_path = datadir + filename
     i = 0
     files = get_file_names(files_path)
@@ -92,30 +91,69 @@ def build_matrix(datadir, filename = '/processed_data/cleanwcounts.csv'):
                         cols[seq] = i
                         i += 1
                 isnum += 1
-    """         
-    for seq in itertools.product(chars, repeat=31):
-        dna = "".join(seq)
-        rev = Seq.reverse_complement(dna)
-        if dna > rev:
-            dna = rev
-        if not dna in cols:
-            cols[dna] = i
-            i += 1
-    """
-    x = np.asarray(files)
-    numcols = i
-    numrows = len(x)
-    kmer_matrix = np.zeros((numrows,numcols),dtype=np.dtype('uint32'))
-    rowindex = 0
-    with ProcessPoolExecutor(max_workers=None) as ppe:
-        for row in ppe.map(get_kmer_counts, files, itertools.repeat(numcols), itertools.repeat(cols), itertools.repeat(datadir)):
-            rows[rowindex] = rowindex
-            kmer_matrix[rowindex,:] = row
-            rowindex += 1
+        """         < 31mer code
+        for seq in itertools.product(chars, repeat=31):
+            dna = "".join(seq)
+            rev = Seq.reverse_complement(dna)
+            if dna > rev:
+                dna = rev
+            if not dna in cols:
+                cols[dna] = i
+                i += 1
+        """
+    #CODE FOR UNKNOWN SET
+    ufiles = []
+    isnum = 0
+    with open(datadir + '/processed_data/unknowncounts.txt', 'r') as f:
+        for l in f:
+            curfile = str.rsplit(l)[0]
+            ufiles.append(curfile)
+            with open(curfile, 'r') as counts:
+                isnum = 0
+                for l in counts:
+                    if isnum % 2 != 0:
+                        seq = str.rsplit(l)[0]
+                        rev = Seq.reverse_complement(seq)
+                        if seq > rev:
+                            seq = rev
+                        if seq not in cols:
+                            cols[seq] = i
+                            i += 1
+                    isnum += 1 
+        
+        
+    if not os.path.isfile(datadir + '/processed_data/features.pkl'):
+        x = np.asarray(files)
+        numcols = i
+        numrows = len(x)
+        kmer_matrix = np.zeros((numrows,numcols),dtype=np.dtype('uint32'))
+        rowindex = 0
+        with ProcessPoolExecutor(max_workers=None) as ppe:
+            for row in ppe.map(get_kmer_counts, files, itertools.repeat(numcols), itertools.repeat(cols), itertools.repeat(datadir)):
+                rows[rowindex] = rowindex
+                kmer_matrix[rowindex,:] = row
+                rowindex += 1
+        
+        matrixdf = pd.DataFrame(kmer_matrix, columns=cols.keys())
+        saves = datadir + '/processed_data/features.pkl'
+        matrixdf.to_pickle(saves)
     
-    matrixdf = pd.DataFrame(kmer_matrix, columns=cols.keys())
-    saves = datadir + '/processed_data/features.pkl'
-    matrixdf.to_pickle(saves)
+    
+    
+    if not os.path.isfile(datadir + '/processed_data/unknownfeatures.pkl'):
+        numucols = i
+        numurows = 53
+        kmer_matrix = np.zeros((numurows,numucols),dtype=np.dtype('uint32'))
+        rowindex = 0
+        with ProcessPoolExecutor(max_workers=None) as ppe:
+            for row in ppe.map(get_kmer_counts, ufiles, itertools.repeat(numucols), itertools.repeat(cols), itertools.repeat('')):
+                rows[rowindex] = rowindex
+                kmer_matrix[rowindex,:] = row
+                rowindex += 1
+        
+        matrixdf = pd.DataFrame(kmer_matrix, columns=cols.keys())
+        saves = datadir + '/processed_data/unknownfeatures.pkl'
+        matrixdf.to_pickle(saves)
     return datadir
 
 

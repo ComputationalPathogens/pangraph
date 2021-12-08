@@ -3,12 +3,18 @@ import pandas as pd
 import numpy as np
 
 def create(datadir):
+    ####
+    #Using bifrost to create the individual graphs used in training/testing of model
+    ####
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
     loadpth = datadir + '/processed_data/clean.csv'
     readcsv = pd.read_csv(loadpth, names=colnames)
     paths = readcsv.seqfile.tolist()
     inds = readcsv.id.tolist()
 
+    ####
+    #Making regular graph dataset
+    ####
     for ind, s in zip(inds,paths):
         checkpth = datadir + '/processed_data/graphs/graph' + str(ind) + '.gfa'
         if os.path.isfile(checkpth):
@@ -18,6 +24,9 @@ def create(datadir):
         pst = ' -o ' + datadir + '/processed_data/graphs/graph' + str(ind) + ' -t 64 -c -v'
         full = cmd + pth + pst
         os.system(full)
+    ####
+    #Making unknown sample dataset to use for predictions later
+    ####
     with open(datadir + '/processed_data/unknownset.txt', 'r') as f:
         ind = 0
         for l in f:

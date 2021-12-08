@@ -4,10 +4,18 @@ import pandas as pd
 import numpy as np
 
 def query(datadir):
+    ####
+    # Building the commands for querying the pangenome graphs with the .fasta of indivudal graphs
+    # Queries are done using BlastFrost (longest part of strategy, look for optimizations here)
+    # Queries are done for each fold with the corresponding train/test set being queried against that folds pangenome graph
+    ####
     datadir = '/home/liam/compare'
     splitspth =  datadir + '/processed_data/foldsplits.npy'
     splits = np.load(splitspth, allow_pickle=True)
     for x in range(5):
+        ####
+        # Regular graph dataset
+        ####
         pths = ""
         for g in splits[0][x]:
             if os.path.isfile(datadir + '/processed_data/fold' + str(x+1) + '/querygraph_graph' + str(g) + '.fasta.search'):
@@ -27,6 +35,10 @@ def query(datadir):
         if pths != "":
             os.system(full)
         pths = ""
+        
+        ####
+        # Also doing queries for unknown dataset
+        ####
         for g in range(50):
             if os.path.isfile(datadir + '/processed_data/unknown/fold' + str(x+1) + '/unknown_graph_unknown' + str(g) + '.fasta.search'):
                 continue

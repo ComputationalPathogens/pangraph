@@ -4,14 +4,24 @@ import numpy as np
 from sklearn.model_selection import StratifiedKFold
 
 def pangenomes(datadir):
+    
+    ####
+    #Skip this step if all 5 folds have already been created, need to do this so graph splits don't get re-done every time
+    ####
     checkpth = datadir + '/processed_data/fold5.gfa'
     if os.path.isfile(checkpth):
         return datadir
+    
+    #Possibly make helper function for loading this in everywhere its used?
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
     loadpth = datadir + '/processed_data/clean.csv'
     readcsv = pd.read_csv(loadpth, names=colnames)
     paths = readcsv.seqfile.tolist()
     labels = readcsv.species.tolist()
+    
+    ####
+    #Creating splits for both graph model and kmer model and saving to file
+    ####
     kf = StratifiedKFold(n_splits=5, shuffle=True)
     train_splits = []
     graph_splits = []
@@ -24,6 +34,10 @@ def pangenomes(datadir):
         train_splits.append(train)
         graph_splits.append(graph)
     ind = 0
+    
+    ####
+    #Building pangenome graph for each fold with 60% of the dataset
+    ####
     for g in graph_splits:
         ind += 1
         writepth = datadir + '/processed_data/fold' + str(ind) + 'graphsamples.txt'
@@ -31,16 +45,13 @@ def pangenomes(datadir):
             for index in g:
                 f.write(datadir + paths[index] + '\n')
         cmd = '/home/liam/bifrost/bifrost/build/src/Bifrost build -r ' + writepth + ' -o ' + datadir + '/processed_data/fold' + str(ind) + ' -t 128 -c'
-    
         os.system(cmd)
+    
+    
     outpth = datadir + '/processed_data/foldsplits.npy'
     np.save(outpth, [train_splits,graph_splits,test_splits], allow_pickle=True)
     for x in range(5):
         outpth = datadir + '/processed_data/fold' + str(x+1) + 'splits.npy'
         tosave = [train_splits[x], graph_splits[x], test_splits[x]]
-    
         np.save(outpth, tosave)
-        
-            
-        
-        return datadir
+    return datadir

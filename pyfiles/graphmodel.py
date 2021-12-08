@@ -10,13 +10,19 @@ from torch_geometric.loader import DataLoader
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 from captum.attr import Saliency, IntegratedGradients
+from pyfiles import importance
+from datetime import datetime
 
 device = torch.device('cuda')
 
+####
+# Model definition for graph network
+####
+
 class SAGPool(torch.nn.Module):
-    def __init__(self, num_layers, hidden, num_class, ratio=0.8):
+    def __init__(self, num_layers, hidden, num_class, ratio=0.99):
         super(SAGPool, self).__init__()
-        self.conv1 = GraphConv(798, hidden, aggr='mean')
+        self.conv1 = GraphConv(656, hidden, aggr='mean')
         self.convs = torch.nn.ModuleList()
         self.pools = torch.nn.ModuleList()
         self.convs.extend([
@@ -58,61 +64,32 @@ class SAGPool(torch.nn.Module):
     def __repr__(self):
         return self.__class__.__name__
 
-def model_forward(node_mask, data, model):
-    integrated = Data(x=node_mask, edge_index=data.edge_index, y=data.y, batch=data.batch, ptr = data.ptr, graphind = data.graphind)
-    out = model(integrated)
-    return out
-
-def explain(data, model, target=0):
-    input_mask = torch.ones((data.x.shape[0],data.x.shape[1])).to(device)
-    input_mask = torch.tensor(input_mask)
-    ig = IntegratedGradients(model_forward)
-    mask = ig.attribute(input_mask, target=data.y[0],additional_forward_args=(data,model,),internal_batch_size=1)
-    node_mask = np.abs(mask.cpu().detach().numpy())
-    if node_mask.max() > 0:
-        node_mask = node_mask / node_mask.max()
-    return node_mask
+def get_acc(loader, model):
+    model.eval()
+    ytrue, ypred = [],[]
+    for d in loader:
+        ytrue.append(d.y[0].item())
+        d = d.to(device)
+        m = model.to(device)
+        pred = m(d)
+        pred = pred.max(dim=1)[1]
+        ypred.append(pred[0].item())
+    accuracy = accuracy_score(ytrue, ypred)
+    return accuracy
     
-def unitig_matrix(datadir, graphids):
-    unitigs = {}
-    for i in graphids:
-        with open(datadir + '/processed_data/fasta/graph' + str(i) + '.fasta', 'r') as file:
-            lnum = 0
-            for l in file:
-                
-                if lnum % 2 != 0:
-                    seq = str.rsplit(l)[0]
-                    rev = Seq.reverse_complement(seq)
-                    if seq > rev:
-                        seq = rev
-                    if seq not in unitigs:
-                        unitigs[seq] = 0
-                lnum += 1
-    return unitigs
 
 def build(datadir):
+    ####
+    # Turn into helper function??
+    ####
     splits = np.load(datadir + '/processed_data/foldsplits.npy', allow_pickle=True)
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
     samples = pd.read_csv(datadir + '/processed_data/clean.csv', names=colnames)
     species = samples.species.tolist()
-    graphids = samples.id.tolist()
     enc = 0
     indspec = {}
     specdict = {}
     labels_unencoded = []
-    baseunitigs = {}
-    for i in graphids:
-        with open(datadir + '/processed_data/fasta/graph' + str(i) + '.fasta', 'r') as file:
-            lnum = 0
-            for l in file:
-                if lnum % 2 != 0:
-                    seq = str.rsplit(l)[0]
-                    rev = Seq.reverse_complement(seq)
-                    if seq > rev:
-                        seq = rev
-                    if seq not in baseunitigs:
-                        baseunitigs[seq] = 0
-                lnum += 1
     #TURN INTO HELPER FUNCTION IN DIFFERENT CLASS EVERYWHERE THIS EXISTS
     for s in set(species):
         labels_unencoded.append(s)
@@ -121,20 +98,24 @@ def build(datadir):
         specdict[s] = enc
         indspec[enc] = s
         enc += 1
+        
     print("NUMCLASSES:%i" % (enc))
     print("Specdict")
     print(specdict)
     print(labels_unencoded)
+    ####
+    # Just printing general information like which number represents which class
+    ####
     final_models = []
     final_features = []
     final_labels = []
     final_train = []
     final_train_y = []
     final_unknown = []
-    meli_features = []
-    abor_features = []
-    suis_features = []
+    final_importance = [[],[],[],[],[]]
+    
     for fold in range(5):
+        print("Fold#: ", str(fold), datetime.now())
         donegraphs = torch.load(datadir + '/processed_data/fold' + str(fold+1) + 'dataset.pkl')
         unknowngraphs = torch.load(datadir + '/processed_data/unknown/fold' + str(fold+1) + 'dataset.pkl')
         model = SAGPool(6, 512, enc)
@@ -143,24 +124,22 @@ def build(datadir):
         meli = []
         abor = []
         suis = []
-        melipresmatrix = []
-        aborpresmatrix = []
-        suispresmatrix = []
-        meligraphinds = []
-        aborgraphinds = []
-        suisgraphinds = []
-        for ind in range(len(splits[1][fold])):
-            if specdict[species[splits[1][fold][ind]]] == 5:
-                meligraphinds.append(ind)
-            elif specdict[species[splits[1][fold][ind]]] == 0:
-                aborgraphinds.append(ind)
-            elif specdict[species[splits[1][fold][ind]]] == 8:
-                suisgraphinds.append(ind)
+        cani = []
+        ovis = []
+        importance_graphs = []
+        
+        ####
+        # Splitting fold dataset into train/test sets based on saved splits
+        ####
         for g in donegraphs:
             if int(g.graphind) in splits[0][fold]:
                 train_data.append(g)
             else:
                 test_data.append(g)
+                
+        ####
+        # Seperating graphs we want feature importance for
+        ####
         for g in donegraphs:
             if g.y.item() == 5:
                 meli.append(g)
@@ -168,64 +147,22 @@ def build(datadir):
                 abor.append(g)
             elif g.y.item() == 8:
                 suis.append(g)
-        ind = 0
-        for g in meli:
-            pos,neg = 0,0
-            melipresmatrix.append([])
-            for node in range(len(g.x)):
-                for posind in meligraphinds:
-                    if g.x[node][posind].item() == 0:
-                        neg += 1
-                    else:
-                        pos += 1
-                if pos >= neg:
-                    melipresmatrix[ind].append(1)
-                else:
-                    melipresmatrix[ind].append(0)
-            g.pres = melipresmatrix[ind]
-            ind += 1
-        ind = 0
-        for g in abor:
-            pos,neg = 0,0
-            aborpresmatrix.append([])
-            for node in range(len(g.x)):
-                for posind in aborgraphinds:
-                    if g.x[node][posind].item() == 0:
-                        neg += 1
-                    else:
-                        pos += 1
-                if pos >= neg:
-                    aborpresmatrix[ind].append(1)
-                else:
-                    aborpresmatrix[ind].append(0)
-            g.pres = aborpresmatrix[ind]
-            ind += 1
-        ind = 0
-        for g in suis:
-            pos,neg = 0,0
-            suispresmatrix.append([])
-            for node in range(len(g.x)):
-                for posind in suisgraphinds:
-                    if g.x[node][posind].item() == 0:
-                        neg += 1
-                    else:
-                        pos += 1
-                if pos >= neg:
-                    suispresmatrix[ind].append(1)
-                else:
-                    suispresmatrix[ind].append(0)
-            g.pres = suispresmatrix[ind]
-            ind += 1
-        train_loader = DataLoader(train_data, batch_size=1)
-        test_loader = DataLoader(test_data, batch_size=1)
-        meli_loader = DataLoader(meli, batch_size=1)
-        abor_loader = DataLoader(abor, batch_size=1)
-        suis_loader = DataLoader(suis, batch_size=1)
+            elif g.y.item() == 2:
+                cani.append(g)
+            elif g.y.item() == 6:
+                ovis.append(g)
+        importance_graphs = [meli, abor, suis, cani, ovis]
+        
+        ####
+        # Training each folds model for 50 epochs, outputting accuracy of train/test set at each iteration
+        ####
+        train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
+        test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
         unknown_loader = DataLoader(unknowngraphs, batch_size=1)
         device = torch.device('cuda')
         model = model.to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
-        for epoch in range(100):
+        for epoch in range(50):
             model.train()
             loss_all = 0
             for d in train_loader:
@@ -236,144 +173,37 @@ def build(datadir):
                 loss.backward()
                 loss_all += loss.item()
                 optimizer.step()
-            print("EPOCH #%i  FOLD#%i  LOSS:%i" % (epoch+1,fold+1, loss_all))
-        model.eval()
-        for d in meli_loader:
-            unitigs = baseunitigs.copy()
-            d = d.to(device)
-            expl = explain(d, model)
-            importance = np.zeros(expl.shape[0])
-            maximp = 0
-            maxind = 0
-            for node in range(len(expl)):
-                importance[node] = np.sum(expl[node])
-                if importance[node] > maximp:
-                    maximp = importance[node]
-                    maxind = node
-            count = 0
-            seqs = []
-            with open(datadir + '/processed_data/fasta/graph' + str(d.graphind.item()) + '.fasta') as f:
-                for l in f:
-                    if count % 2 != 0:
-                        seq = str.rsplit(l)[0]
-                        rev = Seq.reverse_complement(seq)
-                        if seq > rev:
-                            seq = rev
-                        seqs.append(seq)
-                    count += 1
-            for s in range(len(seqs)):
-                unitigs[seqs[s]] += importance[s]
-           # print("HIGHEST IMPORTANCE SEQUENCE")
-           # print(maxind)
-           # print(d.meli[maxind].item())
-           # print(seqs[maxind])
-        maximp = 0
-        maxseq = ''
-        for k in unitigs.keys():
-            if unitigs[k] > maximp:
-                maximp = unitigs[k]
-                maxseq = k
-                
-        print(maxseq)
-        print(Seq.reverse_complement(maxseq))
-        print(maximp)
-        meli_features.append(maxseq)
+            train_acc = get_acc(train_loader, model)
+            test_acc = get_acc(test_loader, model)
+            print("EPOCH #%i  FOLD#%i  LOSS:%i  TRAINACC:%f  TESTACC:%f" % (epoch+1,fold+1, loss_all, train_acc, test_acc))
         
-        for d in abor_loader:
-            unitigs = baseunitigs.copy()
-            d = d.to(device)
-            expl = explain(d, model)
-            importance = np.zeros(expl.shape[0])
-            maximp = 0
-            maxind = 0
-            for node in range(len(expl)):
-                importance[node] = np.sum(expl[node])
-                if importance[node] > maximp:
-                    maximp = importance[node]
-                    maxind = node
-            count = 0
-            seqs = []
-            with open(datadir + '/processed_data/fasta/graph' + str(d.graphind.item()) + '.fasta') as f:
-                for l in f:
-                    if count % 2 != 0:
-                        seq = str.rsplit(l)[0]
-                        rev = Seq.reverse_complement(seq)
-                        if seq > rev:
-                            seq = rev
-                        seqs.append(seq)
-                    count += 1
-            for s in range(len(seqs)):
-                unitigs[seqs[s]] += importance[s]
-           # print("HIGHEST IMPORTANCE SEQUENCE")
-           # print(maxind)
-           # print(d.meli[maxind].item())
-           # print(seqs[maxind])
-        maximp = 0
-        maxseq = ''
-        for k in unitigs.keys():
-            if unitigs[k] > maximp:
-                maximp = unitigs[k]
-                maxseq = k
-                
-        print(maxseq)
-        print(Seq.reverse_complement(maxseq))
-        print(maximp)
-        abor_features.append(maxseq)
-        
-        for d in suis_loader:
-            unitigs = baseunitigs.copy()
-            d = d.to(device)
-            expl = explain(d, model)
-            importance = np.zeros(expl.shape[0])
-            maximp = 0
-            maxind = 0
-            for node in range(len(expl)):
-                importance[node] = np.sum(expl[node])
-                if importance[node] > maximp:
-                    maximp = importance[node]
-                    maxind = node
-            count = 0
-            seqs = []
-            with open(datadir + '/processed_data/fasta/graph' + str(d.graphind.item()) + '.fasta') as f:
-                for l in f:
-                    if count % 2 != 0:
-                        seq = str.rsplit(l)[0]
-                        rev = Seq.reverse_complement(seq)
-                        if seq > rev:
-                            seq = rev
-                        seqs.append(seq)
-                    count += 1
-            for s in range(len(seqs)):
-                unitigs[seqs[s]] += importance[s]
-           # print("HIGHEST IMPORTANCE SEQUENCE")
-           # print(maxind)
-           # print(d.meli[maxind].item())
-           # print(seqs[maxind])
-        maximp = 0
-        maxseq = ''
-        for k in unitigs.keys():
-            if unitigs[k] > maximp:
-                maximp = unitigs[k]
-                maxseq = k
-                
-        print(maxseq)
-        print(Seq.reverse_complement(maxseq))
-        print(maximp)
-        suis_features.append(maxseq)
+        ####
+        # After this folds model is trained, pass it to feature importance module to extract important class features
+        ####
+        specnames = ['melitensis', 'abortus', 'suis', 'canis', 'ovis']
+        for ig in range(len(importance_graphs)):
+            print(specnames[ig])
+            final_importance[ig].append(importance.importance(datadir, importance_graphs[ig], model, int(fold),specnames[ig]))
             
         final_models.append(model)
-
         final_features.append(test_loader)
         final_train.append(train_loader)
         final_unknown.append(unknown_loader)
-
+        
+        
+    ####
+    # Once training is finished we write important features to file and run testing splits on each model
+    ####
+    print("TRAINDONE:", datetime.now())
+    for x in range(5):
+        with open(datadir + '/processed_data/' + str(x) + '_features.txt', 'w') as f:
+            for feat in final_importance[x]:
+                f.write(feat + '\n')
     print(specdict)
-    with open(datadir + '/processed_data/meli_features.txt', 'w') as f:
-        for feat in meli_features:
-            f.write(feat + '\n')
     print("TRAINING DONE")
     ind = 0
     for m, xtest, utest in zip(final_models, final_features, final_unknown):
+        print("TESTING: ", datetime.now())
         wrongdict = {}
         print("TESTING FOLD#%i" % (ind+1))
         ind +=1
@@ -390,6 +220,11 @@ def build(datadir):
                 pred = pred.max(dim=1)[1]
                 upred.append(pred[0].item())
                 file.write(str(d.graphind.item()) + '\t' + str(pred[0].item()) + '\n')
+        
+        ####
+        # Apply models to unknown dataset and record predictions in file for comparision
+        ####
+        print("PREDICTIONS ON UKNNOWN SET")
         print(upred)
         for d in xtest:
             ytrue.append(d.y[0].item())
@@ -403,7 +238,6 @@ def build(datadir):
                     wrongdict[d.y[0].item()] = 1
                 else:
                     wrongdict[d.y[0].item()] += 1
-            #print("HIGHEST:%i vs. ACTUAL:%i" % (pred,d.y[0]))
             correct += pred.eq(d.y).sum().item()
         accuracy = accuracy_score(ytrue, ypred)
         prec_recall = precision_recall_fscore_support(ytrue,ypred)
@@ -411,8 +245,8 @@ def build(datadir):
         prec_recall = pd.DataFrame(data=prec_recall, index=labels_unencoded, columns=['Precision','Recall','F-Score','Supports'])
         model_report = datadir + '/processed_data/' + str(ind) + 'summary.csv'
         print(model_report)
-        prec_recall.to_csv(model_report)
         print(prec_recall)
+        prec_recall.to_csv(model_report)
         print("Accuracy: %f" % (accuracy))
         print("Correct:#%i" %  correct)
         print("Total#%i" % len(xtest.dataset))
