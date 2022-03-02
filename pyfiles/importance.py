@@ -40,14 +40,34 @@ def importance(datadir, graphs, model, split, curspecies):
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
     samples = pd.read_csv(datadir + '/processed_data/clean.csv', names=colnames)
     species = samples.species.tolist()
+    enc = 0
+    indspec = {}
+    specdict = {}
+    labels_unencoded = []
+    #TURN INTO HELPER FUNCTION IN DIFFERENT CLASS EVERYWHERE THIS EXISTS
+    for s in set(species):
+        labels_unencoded.append(s)
+    labels_unencoded.sort()
+    for s in labels_unencoded:
+        specdict[s] = 0
     graphids = samples.id.tolist()
     speciesmask = []
+    specimportance = {}
+    for l in labels_unencoded:
+        specimportance[l] = np.zeros(657, dtype=int)
+    currind = 0
+    for graph in splits[1][split]:
+        specimportance[species[graph]][currind] = 1
+        currind += 1
+        """
     for graph in splits[1][split]:
         if species[graph] == curspecies:
             speciesmask.append(1)
         else:
             speciesmask.append(0)
-    speciesmask.append(0)
+        """
+    print(specimportance)
+    #speciesmask.append(0)
     baseunitigs = {}
     indunitigs = {}
     unitiginds = {}
@@ -65,6 +85,8 @@ def importance(datadir, graphs, model, split, curspecies):
                         baseunitigs[seq] = 0
                         indunitigs[curind] = seq
                         unitiginds[seq] = curind
+                        
+            
                         curind += 1
                 lnum += 1
     
@@ -76,13 +98,26 @@ def importance(datadir, graphs, model, split, curspecies):
         importance = np.zeros(expl.shape[0])
         maximp = 0
         maxind = 0
+        maxclass = ""
         for node in range(len(expl)):
-            for hit in range(len(expl[node])):
-                if speciesmask[hit]:
-                    importance[node] += expl[node][hit]
-            if importance[node] > maximp:
-                maximp = importance[node]
-                maxind = node
+            impdict = specdict.copy()
+            for l in labels_unencoded:
+                impdict[l] = expl[specimportance[l]].sum()
+            #for hit in range(len(expl[node])):
+            #    if speciesmask[hit]:
+            #        importance[node] += expl[node][hit]
+            #if importance[node] > maximp:
+            #    maximp = importance[node]
+            #    maxind = node
+            for l in labels_unencoded:
+                if impdict[l] > maximp:
+                    maximp = impdict[l]
+                    maxclass = l
+        
+        print(maximp)
+        print(maxclass)
+        imprankings = sorted(impdict.items(), key=lambda x:x[1], reverse=True)
+        print(imprankings)
         count = 0
         seqs = []
         with open(datadir + '/processed_data/fasta/graph' + str(d.graphind.item()) + '.fasta') as f:

@@ -32,17 +32,20 @@ def build_folds(datadir):
     ####
     for x in range(5):
         colours = []
+        newgraphc = 0
         with open(datadir + '/processed_data/fold' + str(x+1) + 'graphsamples.txt', 'r') as f:
             for l in f:
                 temp = str.rsplit(l)[0]
                 colours.append(temp)
         if not os.path.isfile(datadir + '/processed_data/fold' + str(x+1) + 'dataset.pkl'):
             donegraphs = []
+            shufgraphs = []
             foldsplits = np.concatenate((splits[0][x],splits[2][x]), axis=0)
             ####
             # Building initial graph by building vectors of to/from unitig links contained in graph
             ####
             for graph in foldsplits:
+                graphseqs = []
                 graphname = datadir + '/processed_data/graphs/graph' + str(graph) + '.gfa'
                 with open(graphname, 'r') as f:
                     numnodes = 0
@@ -52,6 +55,7 @@ def build_folds(datadir):
                         temp = str.split(l)
                         if temp[0] == 'S':
                             numnodes = int(temp[1])
+                            graphseqs.append(temp[2])
                         elif temp[0] == 'L':
                             fromnum = int(temp[1]) - 1
                             tonum = int(temp[3]) - 1
@@ -86,7 +90,28 @@ def build_folds(datadir):
                 data = Data(x=feat, edge_index=edge_index, y=y)
                 data.graphind = int(graph)
                 donegraphs.append(data)
+                if species[graph] == 'melitensis':
+                    alty = np.zeros(1,dtype=np.float32)
+                    alty[0] = enc
+                    alty = torch.tensor(alty, dtype=torch.long)
+                    indices = np.arange(g.shape[0])
+                    np.random.shuffle(indices)
+                    g = g[indices]
+                    graphseqs = np.array(graphseqs)
+                    graphseqs = graphseqs[indices]
+                    altfeat = torch.tensor(g, dtype=torch.float32)
+                    altdata = Data(x=altfeat, edge_index = edge_index, y=alty)
+                    altdata.graphind = len(species) + newgraphc
+                    newgraphc += 1
+                    shufgraphs.append(altdata)
+                    with open(datadir + '/processed_data/shuffled/graph' + str(int(altdata.graphind)) + '.fasta', 'w') as newf:
+                        lines = 0
+                        for seqs in graphseqs:
+                            newf.write('>' + str(lines) + '\n')
+                            newf.write(seqs + '\n')
+                            lines += 1
             torch.save(donegraphs, datadir + '/processed_data/fold' + str(x+1) + 'dataset.pkl')
+            torch.save(shufgraphs, datadir + '/processed_data/fold' + str(x+1) + 'shufdataset.pkl')
         donegraphs = []
         
         ####

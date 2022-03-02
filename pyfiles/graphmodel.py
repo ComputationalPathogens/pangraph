@@ -20,7 +20,7 @@ device = torch.device('cuda')
 ####
 
 class SAGPool(torch.nn.Module):
-    def __init__(self, num_layers, hidden, num_class, ratio=0.99):
+    def __init__(self, num_layers, hidden, num_class, ratio=0.1):
         super(SAGPool, self).__init__()
         self.conv1 = GraphConv(656, hidden, aggr='mean')
         self.convs = torch.nn.ModuleList()
@@ -98,7 +98,10 @@ def build(datadir):
         specdict[s] = enc
         indspec[enc] = s
         enc += 1
-        
+    
+    labels_unencoded.append('rev_mel')
+    predictdict = {}
+    graphpredicts = {}
     print("NUMCLASSES:%i" % (enc))
     print("Specdict")
     print(specdict)
@@ -112,13 +115,15 @@ def build(datadir):
     final_train = []
     final_train_y = []
     final_unknown = []
+    final_meta = []
     final_importance = [[],[],[],[],[]]
     
     for fold in range(5):
         print("Fold#: ", str(fold), datetime.now())
         donegraphs = torch.load(datadir + '/processed_data/fold' + str(fold+1) + 'dataset.pkl')
+        metagraphs = torch.load(datadir + '/processed_data/fold' + str(fold+1) + 'shufdataset.pkl')
         unknowngraphs = torch.load(datadir + '/processed_data/unknown/fold' + str(fold+1) + 'dataset.pkl')
-        model = SAGPool(6, 512, enc)
+        model = SAGPool(3, 512, enc+1)
         train_data = []
         test_data = []
         meli = []
@@ -137,6 +142,13 @@ def build(datadir):
             else:
                 test_data.append(g)
                 
+        for x in range(len(metagraphs)):
+            if x % 2 == 0:
+                train_data.append(metagraphs[x])
+            else:
+                test_data.append(metagraphs[x])
+        print(x)
+            
         ####
         # Seperating graphs we want feature importance for
         ####
@@ -159,6 +171,7 @@ def build(datadir):
         train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
         test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
         unknown_loader = DataLoader(unknowngraphs, batch_size=1)
+        meta_loader = DataLoader(metagraphs, batch_size=1, shuffle=False)
         device = torch.device('cuda')
         model = model.to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
@@ -180,29 +193,34 @@ def build(datadir):
         ####
         # After this folds model is trained, pass it to feature importance module to extract important class features
         ####
+
         specnames = ['melitensis', 'abortus', 'suis', 'canis', 'ovis']
-        for ig in range(len(importance_graphs)):
-            print(specnames[ig])
-            final_importance[ig].append(importance.importance(datadir, importance_graphs[ig], model, int(fold),specnames[ig]))
-            
+        #for ig in range(len(importance_graphs)):
+            #print(specnames[ig])
+        #final_importance[1].append(importance.importance(datadir, importance_graphs[1], model, int(fold),specnames[1]))
+ 
         final_models.append(model)
         final_features.append(test_loader)
         final_train.append(train_loader)
         final_unknown.append(unknown_loader)
+        final_meta.append(meta_loader)
         
-        
+         
     ####
     # Once training is finished we write important features to file and run testing splits on each model
     ####
+    """
     print("TRAINDONE:", datetime.now())
     for x in range(5):
         with open(datadir + '/processed_data/' + str(x) + '_features.txt', 'w') as f:
             for feat in final_importance[x]:
                 f.write(feat + '\n')
+    """
     print(specdict)
     print("TRAINING DONE")
     ind = 0
-    for m, xtest, utest in zip(final_models, final_features, final_unknown):
+    allmpred = []
+    for m, xtest, utest, mtest in zip(final_models, final_features, final_unknown, final_meta):
         print("TESTING: ", datetime.now())
         wrongdict = {}
         print("TESTING FOLD#%i" % (ind+1))
@@ -212,6 +230,21 @@ def build(datadir):
         ytrue = []
         ypred = []
         upred = []
+        mpred = []
+        """
+        for d in mtest:
+            d = d.to(device)
+            m = m.to(device)
+            pred = m(d)
+            print(pred)
+            mpred.append(pred)
+            predmax = pred.max(dim=1)[1]
+            print("METAPREDICTION: ", predmax)
+        allmpred.append(mpred)
+        """
+        ####
+        # Apply models to unknown dataset and record predictions in file for comparision
+        ####
         with open(datadir + '/processed_data/fold' + str(ind) + 'predicts.txt', 'w') as file:
             for d in utest:
                 d = d.to(device)
@@ -220,12 +253,12 @@ def build(datadir):
                 pred = pred.max(dim=1)[1]
                 upred.append(pred[0].item())
                 file.write(str(d.graphind.item()) + '\t' + str(pred[0].item()) + '\n')
-        
-        ####
-        # Apply models to unknown dataset and record predictions in file for comparision
-        ####
         print("PREDICTIONS ON UKNNOWN SET")
         print(upred)
+        
+        ####
+        # Applying model to regular testing set
+        ####
         for d in xtest:
             ytrue.append(d.y[0].item())
             d = d.to(device)
@@ -233,6 +266,14 @@ def build(datadir):
             pred = m(d)
             pred = pred.max(dim=1)[1]
             ypred.append(pred[0].item())
+            if pred[0].item() not in predictdict:
+                predictdict[pred[0].item()] = 1
+            else:
+                predictdict[pred[0].item()] += 1
+            if d.graphind not in graphpredicts:
+                graphpredicts[d.graphind.item()] = [pred[0].item()]
+            else:
+                graphpredicts[d.graphind.item()].append(pred[0].item())
             if pred[0].item() != d.y[0].item():
                 if d.y[0].item() not in wrongdict:
                     wrongdict[d.y[0].item()] = 1
@@ -250,3 +291,19 @@ def build(datadir):
         print("Accuracy: %f" % (accuracy))
         print("Correct:#%i" %  correct)
         print("Total#%i" % len(xtest.dataset))
+    print("GRAPHPREDICTIONS:")
+    #print(graphpredicts)
+    """
+    tpred = [allmpred[0][0],allmpred[0][1],allmpred[0][2]]
+    tmax = []
+    for x in range(4):
+        tpred[0] += allmpred[x+1][0]
+        tpred[1] += allmpred[x+1][1]
+        tpred[2] += allmpred[x+1][2]
+    print(tpred)
+    tmax.append(tpred[0].max(dim=1)[1])
+    tmax.append(tpred[1].max(dim=1)[1])
+    tmax.append(tpred[2].max(dim=1)[1])
+    print(tmax)
+    #print(predictdict)
+    """
