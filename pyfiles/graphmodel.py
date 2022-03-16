@@ -78,7 +78,7 @@ def get_acc(loader, model):
     return accuracy
     
 
-def build(datadir):
+def build(datadir, meta, metapth):
     ####
     # Turn into helper function??
     ####
@@ -99,7 +99,7 @@ def build(datadir):
         indspec[enc] = s
         enc += 1
     
-    labels_unencoded.append('rev_mel')
+    #labels_unencoded.append('rev_mel')
     predictdict = {}
     graphpredicts = {}
     print("NUMCLASSES:%i" % (enc))
@@ -121,9 +121,10 @@ def build(datadir):
     for fold in range(5):
         print("Fold#: ", str(fold), datetime.now())
         donegraphs = torch.load(datadir + '/processed_data/fold' + str(fold+1) + 'dataset.pkl')
-        metagraphs = torch.load(datadir + '/processed_data/fold' + str(fold+1) + 'shufdataset.pkl')
+        if meta:
+            metagraphs = torch.load(datadir + '/processed_data/' + metapth + 'fold' + str(fold+1) + 'dataset.pkl')
         unknowngraphs = torch.load(datadir + '/processed_data/unknown/fold' + str(fold+1) + 'dataset.pkl')
-        model = SAGPool(3, 512, enc+1)
+        model = SAGPool(3, 512, enc)
         train_data = []
         test_data = []
         meli = []
@@ -142,13 +143,14 @@ def build(datadir):
             else:
                 test_data.append(g)
                 
+        """
         for x in range(len(metagraphs)):
             if x % 2 == 0:
                 train_data.append(metagraphs[x])
             else:
                 test_data.append(metagraphs[x])
         print(x)
-            
+        """    
         ####
         # Seperating graphs we want feature importance for
         ####
@@ -171,11 +173,12 @@ def build(datadir):
         train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
         test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
         unknown_loader = DataLoader(unknowngraphs, batch_size=1)
-        meta_loader = DataLoader(metagraphs, batch_size=1, shuffle=False)
+        if meta:
+            meta_loader = DataLoader(metagraphs, batch_size=1, shuffle=False)
         device = torch.device('cuda')
         model = model.to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
-        for epoch in range(50):
+        for epoch in range(150):
             model.train()
             loss_all = 0
             for d in train_loader:
@@ -203,7 +206,10 @@ def build(datadir):
         final_features.append(test_loader)
         final_train.append(train_loader)
         final_unknown.append(unknown_loader)
-        final_meta.append(meta_loader)
+        if meta:
+            final_meta.append(meta_loader)
+        else:
+            final_meta.append('')
         
          
     ####
@@ -231,17 +237,18 @@ def build(datadir):
         ypred = []
         upred = []
         mpred = []
-        """
-        for d in mtest:
-            d = d.to(device)
-            m = m.to(device)
-            pred = m(d)
-            print(pred)
-            mpred.append(pred)
-            predmax = pred.max(dim=1)[1]
-            print("METAPREDICTION: ", predmax)
-        allmpred.append(mpred)
-        """
+        if meta:
+            for d in mtest:
+                print("SAMPLE")
+                d = d.to(device)
+                m = m.to(device)
+                pred = m(d)
+                print(pred)
+                mpred.append(pred)
+                predmax = pred.max(dim=1)[1]
+                print("METAPREDICTION: ", d.graphind, predmax)
+            allmpred.append(mpred)
+
         ####
         # Apply models to unknown dataset and record predictions in file for comparision
         ####
@@ -291,19 +298,18 @@ def build(datadir):
         print("Accuracy: %f" % (accuracy))
         print("Correct:#%i" %  correct)
         print("Total#%i" % len(xtest.dataset))
-    print("GRAPHPREDICTIONS:")
-    #print(graphpredicts)
-    """
-    tpred = [allmpred[0][0],allmpred[0][1],allmpred[0][2]]
-    tmax = []
-    for x in range(4):
-        tpred[0] += allmpred[x+1][0]
-        tpred[1] += allmpred[x+1][1]
-        tpred[2] += allmpred[x+1][2]
-    print(tpred)
-    tmax.append(tpred[0].max(dim=1)[1])
-    tmax.append(tpred[1].max(dim=1)[1])
-    tmax.append(tpred[2].max(dim=1)[1])
-    print(tmax)
-    #print(predictdict)
-    """
+        
+    if meta:
+        print("METAGENOME BIN PREDICTIONS:")
+        tpred = []
+        for x in range(len(allmpred[0])):
+            tpred.append(allmpred[0][x])
+        tmax = []
+        for x in range(4):
+            for y in range(len(tpred)):
+                tpred[y] += allmpred[x+1][y]
+        print(tpred)
+        for x in range(len(tpred)):
+            tmax.append(tpred[x].max(dim=1)[1])
+        print(tmax)
+    print(predictdict)

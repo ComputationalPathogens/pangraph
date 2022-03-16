@@ -5,12 +5,11 @@ import os
 import sys
 from torch_geometric.data import Data
 
-def build_folds():
-    datadir = '/home/liam/compare'
-    filepth = sys.argv[1]
-    outnames = []
-    for name in sys.argv[2:]:
-        outnames.append(name)
+def build_folds(datadir, dataprefix, binprefix, numbins):
+    #datadir = '/home/liam/compare'
+    #dataprefix = sys.argv[1] #name prefix for dataset.pkl
+    #binprefix = sys.argv[2]
+    #numbins = int(sys.argv[3])
     ####
     # Building the final feature graphs for each individual sample. This is done by building a vector of
     # presence/absence in each sample contained in the pangenome for each unitig (graph node) used to query
@@ -23,11 +22,11 @@ def build_folds():
                 temp = str.rsplit(l)[0]
                 colours.append(temp)
         donegraphs = []
-        for outname in outnames:
+        for y in range(numbins):
             ####
             # Building initial graph by building vectors of to/from unitig links contained in graph
             ####
-            graphname = datadir + '/processed_data/' + outname + '.gfa'
+            graphname = datadir + '/processed_data/' + binprefix + str(y+1) + '.gfa'
             with open(graphname, 'r') as f:
                 numnodes = 0
                 fromarr = []
@@ -49,7 +48,7 @@ def build_folds():
             ####
             # Collecting presence/absence vectors from the queries done in last step
             ####
-            graphname = datadir + '/processed_data/fold' + str(x+1) + '_' + outname + '.fasta.search'
+            graphname = datadir + '/processed_data/fold' + str(x+1) + '_' + binprefix + str(y+1) + '.fasta.search'
             with open(graphname, 'r') as f:
                 for l in f:
                         temp = str.split(l)
@@ -68,11 +67,8 @@ def build_folds():
             # Building Pytorch-geo data object from collected data and adding to list of graphs for this fold
             ####
             data = Data(x=feat, edge_index=edge_index, y=y)
-            data.graphind = 1
+            data.graphind = int(y+1)
             donegraphs.append(data)
-        print(donegraphs)
-        torch.save(donegraphs, datadir + '/processed_data/' + outname + 'fold' + str(x+1) + 'dataset.pkl')
+        torch.save(donegraphs, datadir + '/processed_data/' + dataprefix + 'fold' + str(x+1) + 'dataset.pkl')
         
     return datadir
-
-build_folds()

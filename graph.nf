@@ -5,6 +5,8 @@ params.model = "xgb"
 params.k = 5
 params.datadir = "$baseDir"
 params.ksize = 11
+params.meta = false
+params.metapth = ""
 
 nextflow.enable.dsl = 2
 
@@ -23,14 +25,13 @@ workflow {
 		METADATA(params.k, DOWNLOAD.out)
         
 	} else {
-		METADATA(params.k, params.datadir)
-	}
-    PANGENOMES(METADATA.out)
+    PANGENOMES(params.datadir)
     MAKEGRAPHS(PANGENOMES.out)
     MAKEFASTA(MAKEGRAPHS.out)
     QUERY(MAKEFASTA.out)
     DATASET(QUERY.out)
-    MODEL(DATASET.out)
+    MODEL(DATASET.out, params.meta, params.metapth)
+    }
 }
 
 workflow.onComplete {
