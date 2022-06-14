@@ -127,11 +127,11 @@ def build_matrix(datadir, filename = '/processed_data/counts.csv'):
         matrixdf = pd.DataFrame(kmer_matrix, columns=cols.keys())
         saves = datadir + '/processed_data/features.pkl'
         matrixdf.to_pickle(saves)
-        presdf = pd.DataFramE(pres_matrix, columns=cols.keys())
+        presdf = pd.DataFrame(pres_matrix, columns=cols.keys())
         pressaves = datadir + '/processed_data/featurespresence.pkl'
         presdf.to_pickle(pressaves)
         
-        colsums = presdf.sum(axis=1)
+        colsums = presdf.sum(axis=0)
         filtered = []
         for s in colsums:
             if colsums[s] >= 5:
