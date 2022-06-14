@@ -138,7 +138,7 @@ def build_matrix(datadir, filename = '/processed_data/counts.csv'):
                 filtered.append(s)
         filtersaves = datadir + '/processed_data/featuresfiltered.pkl'
         filtereddf = presdf.filter(filtered, axis=1)
-        filtereddf.to_pickle(filtereddf)
+        filtereddf.to_pickle(filtersaves)
     return datadir
 
 
