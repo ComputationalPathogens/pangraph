@@ -1,5 +1,5 @@
 #!/usr/bin/env nextflow
-params.genera = "Brucella,Ochrobactrum,Agrobacterium"
+params.genera = "Bacillus anthracis"
 params.download = false
 params.model = "xgb"
 params.k = 5
@@ -25,7 +25,8 @@ workflow {
 		METADATA(params.k, DOWNLOAD.out)
         
 	} else {
-    PANGENOMES(params.datadir)
+    METADATA(params.k, params.datadir)
+    PANGENOMES(METADATA.out)
     MAKEGRAPHS(PANGENOMES.out)
     MAKEFASTA(MAKEGRAPHS.out)
     QUERY(MAKEFASTA.out)

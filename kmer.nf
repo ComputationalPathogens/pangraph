@@ -4,7 +4,7 @@ params.download = true
 params.model = "xgb"
 params.k = 5
 params.datadir = "$baseDir"
-params.ksize = 11
+params.ksize = 31
 params.features = false
 
 nextflow.enable.dsl = 2
@@ -13,7 +13,6 @@ include { METADATA } from './workflow/metadata'
 include { FEATURES } from './workflow/features'
 include { TRAIN } from './workflow/train'
 include { DOWNLOAD } from './workflow/download'
-include { TESTS } from './workflow/tests'
 
 workflow {
 	if(params.download == true) {
