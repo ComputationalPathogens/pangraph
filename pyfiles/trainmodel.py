@@ -84,7 +84,7 @@ def train_model(k, features, labels, unencoded_labels, save, datadir):
     save - true to save models, false if not saving, also saves test data fold for accompanying model
     """
     params = {'objective':'multi:softmax', 'num_class': '11', 'max_depth': '12'}
-    splits = np.load('/home/liam/compare/processed_data/foldsplits.npy', allow_pickle=True)
+    splits = np.load(datadir + '/processed_data/foldsplits.npy', allow_pickle=True)
     #unknown = pd.read_pickle(datadir + '/processed_data/unknownfeatures.pkl')
     count = 0
     num_feats = 2000000
