@@ -23,22 +23,28 @@ def pangenomes(datadir):
     #Creating splits for both graph model and kmer model and saving to file
     ####
     kf = StratifiedKFold(n_splits=5, shuffle=True)
-    train_splits = []
-    graph_splits = []
+
     test_splits = []
+
     for train_index, test_index in kf.split(paths, labels):
+        
         test_splits.append(test_index)
-        gsplit = len(train_index) // 4
-        train = train_index[:gsplit]
-        graph = train_index[gsplit:]
-        train_splits.append(train)
-        graph_splits.append(graph)
-    ind = 0
+
+    graphsplits = [np.concatenate((test_splits[0],test_splits[1],test_splits[2])),np.concatenate((test_splits[1],test_splits[2],test_splits[3])),np.concatenate((test_splits[2],test_splits[3],test_splits[4])),
+                   np.concatenate((test_splits[0],test_splits[3],test_splits[4])),np.concatenate((test_splits[0],test_splits[1],test_splits[4]))]
+    trainsplits = [test_splits[3],test_splits[4],test_splits[0],test_splits[1],test_splits[2]]
+    testsplits = [test_splits[4],test_splits[0],test_splits[1],test_splits[2],test_splits[3]]
     
+    ind = 0
+    with open('/home/liam/anthrax/pangraph/SL_Pangenome.txt', 'w') as f:       
+        for p in paths:    
+            f.write(datadir + p + '\n')
+        cmd = '/home/liam/bifrost/bifrost/build/src/Bifrost build -r ' + '/home/liam/anthrax/pangraph/SL_Pangenome.txt' + ' -o ' + datadir + '/processed_data/SL_Pangenome' + ' -t 128 -c'
+        os.system(cmd)
     ####
     #Building pangenome graph for each fold with 60% of the dataset
     ####
-    for g in graph_splits:
+    for g in graphsplits:
         ind += 1
         writepth = datadir + '/processed_data/fold' + str(ind) + 'graphsamples.txt'
         with open(writepth, 'w') as f:
@@ -49,9 +55,9 @@ def pangenomes(datadir):
     
     
     outpth = datadir + '/processed_data/foldsplits.npy'
-    np.save(outpth, [train_splits,graph_splits,test_splits], allow_pickle=True)
+    np.save(outpth, [trainsplits,graphsplits,testsplits], allow_pickle=True)
     for x in range(5):
         outpth = datadir + '/processed_data/fold' + str(x+1) + 'splits.npy'
-        tosave = [train_splits[x], graph_splits[x], test_splits[x]]
+        tosave = [trainsplits[x], graphsplits[x], testsplits[x]]
         np.save(outpth, tosave)
     return datadir

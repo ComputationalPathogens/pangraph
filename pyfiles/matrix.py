@@ -38,6 +38,7 @@ def get_kmer_counts(filename, num_cols, col_index, datadir):
     """
     #count each kmer that exists, look into jellyfish doing this for us, collect the highest freq kmers?
     genome_row = np.zeros((num_cols), dtype=np.dtype('uint32'))
+    presence_row = np.zeros((num_cols), dtype=np.dtype('uint32'))
     append = datadir + filename
     #Same method used in Computational-pathogens/acheron
     with open(append) as f:
@@ -46,15 +47,19 @@ def get_kmer_counts(filename, num_cols, col_index, datadir):
             kmercount = int(kmercount)
             seq = record.seq
             seq = str(seq)
-            if len(seq) < 31:
+            if len(seq) < 11:
                 print("Invalid key: %s" % (seq))
                 print(filename)
             index = col_index[seq]
             genome_row[index] = kmercount
+            if kmercount > 0:
+                presence_row[index] = 1
+            else:
+                presence_row[index] = 0
 
-    return genome_row
+    return genome_row, presence_row
 
-def build_matrix(datadir, filename = '/processed_data/cleanwcounts.csv'):
+def build_matrix(datadir, filename = '/processed_data/counts.csv'):
     """
     Parameters
     ----------
@@ -76,39 +81,11 @@ def build_matrix(datadir, filename = '/processed_data/cleanwcounts.csv'):
 
     files_path = datadir + filename
     i = 0
-    files = get_file_names(files_path)
-    isnum = 0
-    for f in files:
-        with open(datadir + f, 'r') as counts:
-            isnum = 0
-            for l in counts:
-                if isnum % 2 != 0:
-                    seq = str.rsplit(l)[0]
-                    rev = Seq.reverse_complement(seq)
-                    if seq > rev:
-                        seq = rev
-                    if seq not in cols:
-                        cols[seq] = i
-                        i += 1
-                isnum += 1
-        """         < 31mer code
-        for seq in itertools.product(chars, repeat=31):
-            dna = "".join(seq)
-            rev = Seq.reverse_complement(dna)
-            if dna > rev:
-                dna = rev
-            if not dna in cols:
-                cols[dna] = i
-                i += 1
-        """
-    #CODE FOR UNKNOWN SET
-    ufiles = []
-    isnum = 0
-    with open(datadir + '/processed_data/unknowncounts.txt', 'r') as f:
-        for l in f:
-            curfile = str.rsplit(l)[0]
-            ufiles.append(curfile)
-            with open(curfile, 'r') as counts:
+    if not os.path.isfile(datadir + '/processed_data/features.pkl'):
+        files = get_file_names(files_path)
+        isnum = 0
+        for f in files:
+            with open(datadir + f, 'r') as counts:
                 isnum = 0
                 for l in counts:
                     if isnum % 2 != 0:
@@ -119,7 +96,18 @@ def build_matrix(datadir, filename = '/processed_data/cleanwcounts.csv'):
                         if seq not in cols:
                             cols[seq] = i
                             i += 1
-                    isnum += 1 
+                    isnum += 1
+            """         < 31mer code
+            for seq in itertools.product(chars, repeat=31):
+                dna = "".join(seq)
+                rev = Seq.reverse_complement(dna)
+                if dna > rev:
+                    dna = rev
+                if not dna in cols:
+                    cols[dna] = i
+                    i += 1
+            """
+
         
         
     if not os.path.isfile(datadir + '/processed_data/features.pkl'):
@@ -127,33 +115,30 @@ def build_matrix(datadir, filename = '/processed_data/cleanwcounts.csv'):
         numcols = i
         numrows = len(x)
         kmer_matrix = np.zeros((numrows,numcols),dtype=np.dtype('uint32'))
+        pres_matrix = np.zeros((numrows,numcols),dtype=np.dtype('uint32'))
         rowindex = 0
         with ProcessPoolExecutor(max_workers=None) as ppe:
-            for row in ppe.map(get_kmer_counts, files, itertools.repeat(numcols), itertools.repeat(cols), itertools.repeat(datadir)):
+            for row, pres in ppe.map(get_kmer_counts, files, itertools.repeat(numcols), itertools.repeat(cols), itertools.repeat(datadir)):
                 rows[rowindex] = rowindex
                 kmer_matrix[rowindex,:] = row
+                pres_matrix[rowindex,:] = pres
                 rowindex += 1
         
         matrixdf = pd.DataFrame(kmer_matrix, columns=cols.keys())
         saves = datadir + '/processed_data/features.pkl'
         matrixdf.to_pickle(saves)
-    
-    
-    
-    if not os.path.isfile(datadir + '/processed_data/unknownfeatures.pkl'):
-        numucols = i
-        numurows = 53
-        kmer_matrix = np.zeros((numurows,numucols),dtype=np.dtype('uint32'))
-        rowindex = 0
-        with ProcessPoolExecutor(max_workers=None) as ppe:
-            for row in ppe.map(get_kmer_counts, ufiles, itertools.repeat(numucols), itertools.repeat(cols), itertools.repeat('')):
-                rows[rowindex] = rowindex
-                kmer_matrix[rowindex,:] = row
-                rowindex += 1
+        presdf = pd.DataFrame(pres_matrix, columns=cols.keys())
+        pressaves = datadir + '/processed_data/featurespresence.pkl'
+        presdf.to_pickle(pressaves)
         
-        matrixdf = pd.DataFrame(kmer_matrix, columns=cols.keys())
-        saves = datadir + '/processed_data/unknownfeatures.pkl'
-        matrixdf.to_pickle(saves)
+        colsums = presdf.sum(axis=0)
+        filtered = []
+        for c,s in colsums.items():
+            if s >= 5:
+                filtered.append(c)
+        filtersaves = datadir + '/processed_data/featuresfiltered.pkl'
+        filtereddf = presdf.filter(filtered, axis=1)
+        filtereddf.to_pickle(filtersaves)
     return datadir
 
 

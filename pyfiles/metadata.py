@@ -40,10 +40,13 @@ def build_metadata(datadir, filename = '/processed_data/metadata.csv'):
         pth, assembly, organism, genus, species, cnt = 'empty', 'empty', 'empty', 'empty', 'empty', 'empty'
         for file in files:
             ext = os.path.splitext(file)[-1].lower()
-            if ext == ".fna":
+            if ext == ".fna" or ext == '.fasta':
                 temp = os.path.basename(subdir)
                 name = os.path.splitext(file)[0]
-                pth = '/refseq/bacteria/' + temp + '/' + name + '.fna'
+                if ext == '.fna':
+                        pth = '/refseq/bacteria/' + temp + '/' + name + '.fna'
+                else:
+                        pth = '/refseq/bacteria/' + temp + '/' + name + '.fasta'
             if ext == ".gz":
                 temp = os.path.basename(subdir)
                 extr = os.path.splitext(file)[0]

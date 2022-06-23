@@ -39,7 +39,7 @@ def load_models(modelnums):
 
     return models, features, labels
 
-def load_data(dataloc, filenamenp = '/processed_data/features.pkl', filenamecsv = '/processed_data/cleanwcounts.csv'):
+def load_data(dataloc, filenamenp = '/processed_data/featuresfiltered.pkl', filenamecsv = '/processed_data/counts.csv'):
     """
     Parameters
     ----------
@@ -85,7 +85,7 @@ def train_model(k, features, labels, unencoded_labels, save, datadir):
     """
     params = {'objective':'multi:softmax', 'num_class': '11', 'max_depth': '12'}
     splits = np.load('/home/liam/compare/processed_data/foldsplits.npy', allow_pickle=True)
-    unknown = pd.read_pickle(datadir + '/processed_data/unknownfeatures.pkl')
+    #unknown = pd.read_pickle(datadir + '/processed_data/unknownfeatures.pkl')
     count = 0
     num_feats = 2000000
     final_models = []
@@ -95,29 +95,33 @@ def train_model(k, features, labels, unencoded_labels, save, datadir):
     final_train_y = []
     final_unknown = []
     for x in range(5):
-        print(features.shape)
         count+=1
+        combinesplits = [*splits[0][x], *splits[1][x]]
+        testsplits = [*splits[2][x]]
         sk_obj = SelectKBest(f_classif, k=num_feats)
-        Xtrain,Xtest = features.iloc[splits[0][x]], features.iloc[splits[2][x]]
-        Ytrain = [labels[i] for i in splits[0][x]]
-        Ytest = [labels[i] for i in splits[2][x]]
+        print(combinesplits)
+        print(testsplits)
+        print(features)
+        Xtrain,Xtest = features.iloc[combinesplits], features.iloc[testsplits]
+        Ytrain = [labels[i] for i in combinesplits]
+        Ytest = [labels[i] for i in testsplits]
 
         Xtrain = sk_obj.fit_transform(Xtrain, Ytrain)
         Xtest = sk_obj.transform(Xtest)
-        utrain = sk_obj.transform(unknown)
+        #utrain = sk_obj.transform(unknown)
         featmask = sk_obj.get_support()
         featnames = features.columns[featmask]
         xgb_matrix = xgb.DMatrix(Xtrain, label=Ytrain, feature_names=featnames)
         booster = xgb.train(params, xgb_matrix)
         xgb_test = xgb.DMatrix(Xtest, feature_names=featnames)
-        xgb_unk = xgb.DMatrix(utrain, feature_names=featnames)
+        #xgb_unk = xgb.DMatrix(utrain, feature_names=featnames)
 
         final_models.append(booster)
         final_features.append(xgb_test)
         final_labels.append(Ytest)
         final_train.append(Xtrain)
         final_train_y.append(Ytrain)
-        final_unknown.append(xgb_unk)
+        #final_unknown.append(xgb_unk)
         shapimp = shap.TreeExplainer(booster)
         shap_vals = shapimp.shap_values(xgb_matrix)
         shap.summary_plot(shap_vals, Xtrain, show=False)
@@ -142,9 +146,9 @@ def test_model(final_models, final_features, final_labels, labels_unencoded, fin
         print(accuracy)
         print(prec_recall)
         print("UNKNOWN")
-        prediction = model.predict(utest)
-        with open(datadir + '/processed_data/fold' + str(count) + 'predicts.txt','w') as file:
-            for x in range(len(prediction)):
-                file.write(str(x) + '\t' + str(prediction[x]) + '\n')
+        #prediction = model.predict(utest)
+        #with open(datadir + '/processed_data/fold' + str(count) + 'predicts.txt','w') as file:
+        #    for x in range(len(prediction)):
+        #        file.write(str(x) + '\t' + str(prediction[x]) + '\n')
         print(prediction)
     return

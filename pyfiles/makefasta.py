@@ -37,6 +37,7 @@ def create(datadir):
     ####
     # Making .fasta for unknown graph dataset
     ####
+    """
     for ind in range(50):
         openpth = datadir + '/processed_data/unknown/unknown' + str(ind) + '.gfa'
         writepth = datadir + '/processed_data/unknown/unknown' + str(ind) + '.fasta'
@@ -52,4 +53,5 @@ def create(datadir):
                         w.write(seq + '\n')
                         w.write(temp[2] + '\n')
                         lineind += 1
+    """
     return datadir

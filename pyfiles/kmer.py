@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-def count_kmer(rootdir, ksize = 11, filename = '/processed_data/clean.csv'):
+def count_kmer(rootdir, ksize = 31, filename = '/processed_data/metadata.csv'):
     """
     Parameters
     ----------
@@ -32,7 +32,7 @@ def count_kmer(rootdir, ksize = 11, filename = '/processed_data/clean.csv'):
     for seqfile, cntfile in zip(files, files2):
         ext = os.path.splitext(str(seqfile))
         dirname = os.path.dirname(seqfile)
-        if ext[-1] == ".fna":
+        if ext[-1] == ".fna" or ext[-1] == ".fasta":
             try:
                 mkpth = rootdir + dirname + '/' + str(ksize) + '-mers/'
                 os.mkdir(mkpth)
@@ -47,7 +47,9 @@ def count_kmer(rootdir, ksize = 11, filename = '/processed_data/clean.csv'):
                 data.at[id,'cntfile'] = cntname
                 id = id + 1
                 continue
-            cmd = 'jellyfish count -m ' + str(ksize) + ' -s 3G --bf-size 100G -t 16 -C -o ' + merpth + ' ' + seqpth
+            #if ext[-1] == ".fna":
+            cmd = 'jellyfish count -m ' + str(ksize) + ' -s 3G -t 64 -C -o ' + merpth + ' ' + seqpth
+            #cmd = 'jellyfish count -m ' + str(ksize) + ' -s 100M -t 16 -C -o ' + merpth + ' ' + seqpth
             cmd2 = 'jellyfish dump ' + merpth + ' > ' + dumppth
             os.system(cmd)
             os.system(cmd2)
@@ -57,30 +59,6 @@ def count_kmer(rootdir, ksize = 11, filename = '/processed_data/clean.csv'):
             dumppth = "error"
             data.at[id,'cntfile'] = cntname
             id = id + 1
-    filepath = rootdir + '/processed_data/cleanwcounts.csv'
+    filepath = rootdir + '/processed_data/counts.csv'
     data.to_csv(filepath, index=False, header=False)
-    
-    #UKKNOWN DATASET (MAYBE MOVE TO SEPERATE NEXTFLOW?
-    cntnames = []
-    with open(rootdir + '/processed_data/unknownset.txt', 'r') as file:
-        for l in file:
-            dirname = os.path.dirname(str.rsplit(l)[0])
-            try:
-                mkpth = dirname + '/' + str(ksize) + '-mers/'
-                os.mkdir(mkpth)
-            except OSError:
-                pass
-            merpth = dirname + '/' + str(ksize) + '-mers/' + 'mer_countsbf.jf'
-            dumppth = dirname + '/' + str(ksize) + '-mers/' + dumpname
-            seqpth = str.rsplit(l)[0]
-            cntname = dirname + '/' + str(ksize) + '-mers/' + dumpname
-            if not os.path.isfile(dumppth):
-                cmd = 'jellyfish count -m ' + str(ksize) + ' -s 3G --bf-size 100G -t 16 -C -o ' + merpth + ' ' + seqpth
-                cmd2 = 'jellyfish dump ' + merpth + ' > ' + dumppth
-                os.system(cmd)
-                os.system(cmd2)
-            cntnames.append(cntname)
-    with open(rootdir + '/processed_data/unknowncounts.txt', 'w') as file:
-        for c in cntnames:
-            file.write(c + '\n')
     return rootdir

@@ -82,6 +82,7 @@ def build(datadir, meta, metapth):
     ####
     # Turn into helper function??
     ####
+    meta = False
     splits = np.load(datadir + '/processed_data/foldsplits.npy', allow_pickle=True)
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
     samples = pd.read_csv(datadir + '/processed_data/clean.csv', names=colnames)
@@ -123,7 +124,7 @@ def build(datadir, meta, metapth):
         donegraphs = torch.load(datadir + '/processed_data/fold' + str(fold+1) + 'dataset.pkl')
         if meta:
             metagraphs = torch.load(datadir + '/processed_data/' + metapth + 'fold' + str(fold+1) + 'dataset.pkl')
-        unknowngraphs = torch.load(datadir + '/processed_data/unknown/fold' + str(fold+1) + 'dataset.pkl')
+        #unknowngraphs = torch.load(datadir + '/processed_data/unknown/fold' + str(fold+1) + 'dataset.pkl')
         model = SAGPool(3, 512, enc)
         train_data = []
         test_data = []
@@ -172,7 +173,7 @@ def build(datadir, meta, metapth):
         ####
         train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
         test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
-        unknown_loader = DataLoader(unknowngraphs, batch_size=1)
+        #unknown_loader = DataLoader(unknowngraphs, batch_size=1)
         if meta:
             meta_loader = DataLoader(metagraphs, batch_size=1, shuffle=False)
         device = torch.device('cuda')
@@ -205,7 +206,7 @@ def build(datadir, meta, metapth):
         final_models.append(model)
         final_features.append(test_loader)
         final_train.append(train_loader)
-        final_unknown.append(unknown_loader)
+        #final_unknown.append(unknown_loader)
         if meta:
             final_meta.append(meta_loader)
         else:
@@ -226,7 +227,7 @@ def build(datadir, meta, metapth):
     print("TRAINING DONE")
     ind = 0
     allmpred = []
-    for m, xtest, utest, mtest in zip(final_models, final_features, final_unknown, final_meta):
+    for m, xtest, mtest in zip(final_models, final_features, final_meta):
         print("TESTING: ", datetime.now())
         wrongdict = {}
         print("TESTING FOLD#%i" % (ind+1))
@@ -235,7 +236,7 @@ def build(datadir, meta, metapth):
         correct = 0
         ytrue = []
         ypred = []
-        upred = []
+        #upred = []
         mpred = []
         if meta:
             for d in mtest:
@@ -252,6 +253,7 @@ def build(datadir, meta, metapth):
         ####
         # Apply models to unknown dataset and record predictions in file for comparision
         ####
+        """
         with open(datadir + '/processed_data/fold' + str(ind) + 'predicts.txt', 'w') as file:
             for d in utest:
                 d = d.to(device)
@@ -262,7 +264,7 @@ def build(datadir, meta, metapth):
                 file.write(str(d.graphind.item()) + '\t' + str(pred[0].item()) + '\n')
         print("PREDICTIONS ON UKNNOWN SET")
         print(upred)
-        
+        """
         ####
         # Applying model to regular testing set
         ####

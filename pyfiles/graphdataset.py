@@ -117,6 +117,7 @@ def build_folds(datadir):
         ####
         # Doing same process but for the unknown graph dataset
         ####
+        """
         if not os.path.isfile(datadir + '/processed_data/unknown/fold' + str(x+1) + 'dataset.pkl'):
             for graph in range(50):
                 graphname = datadir + '/processed_data/unknown/unknown' + str(graph) + '.gfa'
@@ -157,4 +158,5 @@ def build_folds(datadir):
                 data.graphind = int(graph)
                 donegraphs.append(data)
             torch.save(donegraphs, datadir + '/processed_data/unknown/fold' + str(x+1) + 'dataset.pkl')
+        """
     return datadir

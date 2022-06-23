@@ -9,7 +9,6 @@ def query(datadir):
     # Queries are done using BlastFrost (longest part of strategy, look for optimizations here)
     # Queries are done for each fold with the corresponding train/test set being queried against that folds pangenome graph
     ####
-    datadir = '/home/liam/compare'
     splitspth =  datadir + '/processed_data/foldsplits.npy'
     splits = np.load(splitspth, allow_pickle=True)
     for x in range(5):
@@ -39,6 +38,7 @@ def query(datadir):
         ####
         # Also doing queries for unknown dataset
         ####
+        """
         for g in range(50):
             if os.path.isfile(datadir + '/processed_data/unknown/fold' + str(x+1) + '/unknown_graph_unknown' + str(g) + '.fasta.search'):
                 continue
@@ -48,4 +48,5 @@ def query(datadir):
         full = cmd + pths + flags
         if pths != "":
             os.system(full)   
+        """
     return datadir
