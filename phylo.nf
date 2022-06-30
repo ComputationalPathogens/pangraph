@@ -1,30 +1,26 @@
 #!/usr/bin/env nextflow
-params.genera = "Brucella,Ochrobactrum,Agrobacterium"
-params.download = false
-params.model = "xgb"
-params.k = 5
 params.datadir = "$baseDir"
-params.ksize = 11
+params.virus = false
+params.virusfile = ''
 
 nextflow.enable.dsl = 2
 
-include { METADATA } from './workflow/metadata'
-include { DOWNLOAD } from './workflow/download'
-include { MAKEGRAPHS } from './workflow/makegraphs'
-include { MAKEFASTA } from './workflow/makefasta'
-include { PANGENOMES } from './workflow/pangenomes'
-include { PRESENCE } from './workflow/presence'
+include { INDEX } from './workflow/index'
+include { COUNTS } from './workflow/counts'
+include { MATRIX } from './workflow/matrix'
+include { SEPERATE } from './workflow/seperate'
+include { HCLUST } from './workflow/hclust'
 
 workflow {
-	if(params.download == true) {
-		DOWNLOAD(params.datadir, params.genera)
-		METADATA(params.k, DOWNLOAD.out)
-	} else {
-    PANGENOMES(params.datadir)
-    MAKEGRAPHS(PANGENOMES.out)
-    MAKEFASTA(MAKEGRAPHS.out)
-    PRESENCE(MAKEFASTA.out)
+    if (params.virus == true) {
+        SEPERATE(params.datadir, params.virusfile)
+        INDEX(SEPERATE.out)
+    } else {
+        INDEX(params.datadir)
     }
+    COUNTS(INDEX.out)
+    MATRIX(COUNTS.out)
+    HCLUST(MATRIX.out)
 }
 
 workflow.onComplete {
