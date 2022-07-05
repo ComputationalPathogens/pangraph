@@ -13,9 +13,9 @@ def seperate_viral(datadir, filepth):
                 try:
                     mkpth = datadir + '/refseq/virus/' + str(currsample)
                     os.mkdir(mkpth)
+                except:
+                    pass
                 w = open(datadir + '/refseq/virus/' + str(currsample) + '/' + str(currsample) + '.fasta', 'w')
                 w.write(l)
             else:
                 w.write(l)
-                
-                

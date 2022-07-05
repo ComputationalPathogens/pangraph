@@ -9,6 +9,9 @@ include { INDEX } from './workflow/index'
 include { COUNTS } from './workflow/counts'
 include { MATRIX } from './workflow/matrix'
 include { SEPERATE } from './workflow/seperate'
+include { CONVERT } from './workflow/convert'
+include { IQTREE } from './workflow/iqtree'
+include { HCLUST } from './workflow/hclust'
 
 workflow {
     if (params.virus == true) {
@@ -19,6 +22,9 @@ workflow {
     }
     COUNTS(INDEX.out)
     MATRIX(COUNTS.out)
+    CONVERT(MATRIX.out)
+    IQTREE(CONVERT.out)
+    HCLUST(IQTREE.out)
 }
 
 workflow.onComplete {

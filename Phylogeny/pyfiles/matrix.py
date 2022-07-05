@@ -1,6 +1,7 @@
 import itertools
 import pandas as pd
 import os
+import pyarrow
 from Bio import Seq, SeqIO
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor
@@ -81,6 +82,7 @@ def build_matrix(datadir, filename = '/processed_data/counts.csv'):
 
     files_path = datadir + filename
     i = 0
+    files = get_file_names(files_path)
     if not os.path.isfile(datadir + '/processed_data/features.pkl'):
         files = get_file_names(files_path)
         isnum = 0
@@ -114,8 +116,8 @@ def build_matrix(datadir, filename = '/processed_data/counts.csv'):
         x = np.asarray(files)
         numcols = i
         numrows = len(x)
-        kmer_matrix = np.zeros((numrows,numcols),dtype=np.dtype('uint32'))
-        pres_matrix = np.zeros((numrows,numcols),dtype=np.dtype('uint32'))
+        kmer_matrix = np.zeros((numrows,numcols),dtype=np.dtype('uint8'))
+        pres_matrix = np.zeros((numrows,numcols),dtype=np.dtype('uint8'))
         rowindex = 0
         with ProcessPoolExecutor(max_workers=None) as ppe:
             for row, pres in ppe.map(get_kmer_counts, files, itertools.repeat(numcols), itertools.repeat(cols), itertools.repeat(datadir)):
@@ -136,9 +138,12 @@ def build_matrix(datadir, filename = '/processed_data/counts.csv'):
         for c,s in colsums.items():
             if s >= 5:
                 filtered.append(c)
+            elif s <= (numrows-5):
+                filtered.append(c)
         filtersaves = datadir + '/processed_data/featuresfiltered.pkl'
-        filtereddf = presdf.filter(filtered, axis=1)
+        filtereddf = matrixdf.filter(filtered, axis=1)
         filtereddf.to_pickle(filtersaves)
+        filtereddf.to_feather('filteredunitigs.feather')
     return datadir
 
 
