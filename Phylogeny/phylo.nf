@@ -2,6 +2,7 @@
 params.datadir = "$baseDir"
 params.virus = false
 params.virusfile = ''
+params.plot = false
 
 nextflow.enable.dsl = 2
 
@@ -10,6 +11,7 @@ include { COUNTS } from './workflow/counts'
 include { MATRIX } from './workflow/matrix'
 include { SEPERATE } from './workflow/seperate'
 include { CONVERT } from './workflow/convert'
+include { PLOT } from './workflow/plot'
 include { IQTREE } from './workflow/iqtree'
 include { HCLUST } from './workflow/hclust'
 
@@ -22,6 +24,9 @@ workflow {
     }
     COUNTS(INDEX.out)
     MATRIX(COUNTS.out)
+    if (params.plot == true) {
+        PLOT(MATRIX.out)
+    }
     CONVERT(MATRIX.out)
     IQTREE(CONVERT.out)
     HCLUST(IQTREE.out)
