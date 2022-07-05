@@ -38,8 +38,8 @@ def get_kmer_counts(filename, num_cols, col_index, datadir):
 
     """
     #count each kmer that exists, look into jellyfish doing this for us, collect the highest freq kmers?
-    genome_row = np.zeros((num_cols), dtype=np.dtype('uint32'))
-    presence_row = np.zeros((num_cols), dtype=np.dtype('uint32'))
+    genome_row = np.zeros((num_cols), dtype=np.dtype('uint8'))
+    presence_row = np.zeros((num_cols), dtype=np.dtype('uint8'))
     append = datadir + filename
     #Same method used in Computational-pathogens/acheron
     with open(append) as f:
@@ -136,9 +136,7 @@ def build_matrix(datadir, filename = '/processed_data/counts.csv'):
         colsums = presdf.sum(axis=0)
         filtered = []
         for c,s in colsums.items():
-            if s >= 5:
-                filtered.append(c)
-            elif s <= (numrows-5):
+            if s >= 5 and s < (numrows-5):
                 filtered.append(c)
         filtersaves = datadir + '/processed_data/featuresfiltered.pkl'
         filtereddf = matrixdf.filter(filtered, axis=1)

@@ -28,15 +28,17 @@ def build_folds(datadir):
     ####
     # Building the final feature graphs for each individual sample. This is done by building a vector of
     # presence/absence in each sample contained in the pangenome for each unitig (graph node) used to query
-    # resulting in a graph of shape [#_nodes][#_pangenome_samples] which is ~655 samples for the current dataset
+    # resulting in a graph of shape [#_nodes][#_pangenome_samples] which is ~655 samples for the brucella dataset
     ####
     for x in range(5):
         colours = []
         newgraphc = 0
+        graphfeatlength = 0
         with open(datadir + '/processed_data/fold' + str(x+1) + 'graphsamples.txt', 'r') as f:
             for l in f:
                 temp = str.rsplit(l)[0]
                 colours.append(temp)
+                graphfeatlength += 1
         if not os.path.isfile(datadir + '/processed_data/fold' + str(x+1) + 'dataset.pkl'):
             donegraphs = []
             shufgraphs = []
@@ -65,7 +67,7 @@ def build_folds(datadir):
                                 tonum = 0
                             fromarr.append(fromnum)
                             toarr.append(tonum)
-                g = np.zeros((numnodes,656),dtype=np.float32)
+                g = np.zeros((numnodes,graphfeatlength),dtype=np.float32)
                 ####
                 # Collecting presence/absence vectors from the queries done in last step
                 ####
@@ -90,6 +92,8 @@ def build_folds(datadir):
                 data = Data(x=feat, edge_index=edge_index, y=y)
                 data.graphind = int(graph)
                 donegraphs.append(data)
+                """
+                #Code for shuffled species experiment
                 if species[graph] == 'melitensis':
                     alty = np.zeros(1,dtype=np.float32)
                     alty[0] = enc
@@ -110,53 +114,7 @@ def build_folds(datadir):
                             newf.write('>' + str(lines) + '\n')
                             newf.write(seqs + '\n')
                             lines += 1
+                """
             torch.save(donegraphs, datadir + '/processed_data/fold' + str(x+1) + 'dataset.pkl')
-            torch.save(shufgraphs, datadir + '/processed_data/fold' + str(x+1) + 'shufdataset.pkl')
-        donegraphs = []
-        
-        ####
-        # Doing same process but for the unknown graph dataset
-        ####
-        """
-        if not os.path.isfile(datadir + '/processed_data/unknown/fold' + str(x+1) + 'dataset.pkl'):
-            for graph in range(50):
-                graphname = datadir + '/processed_data/unknown/unknown' + str(graph) + '.gfa'
-                with open(graphname, 'r') as f:
-                    numnodes = 0
-                    fromarr = []
-                    toarr = []
-                    for l in f:
-                        temp = str.split(l)
-                        if temp[0] == 'S':
-                            numnodes = int(temp[1])
-                        elif temp[0] == 'L':
-                            fromnum = int(temp[1]) - 1
-                            tonum = int(temp[3]) - 1
-                            if fromnum < 0:
-                                fromnum = 0
-                            if tonum < 0:
-                                tonum = 0
-                            fromarr.append(fromnum)
-                            toarr.append(tonum)
-                g = np.zeros((numnodes,656),dtype=np.float32)
-                graphname = datadir + '/processed_data/unknown/fold' + str(x+1) + '/unknown_graph_unknown' + str(graph) + '.fasta.search'
-                with open(graphname, 'r') as f:
-                    for l in f:
-                            temp = str.split(l)
-                            g[int(temp[0])][colours.index(temp[1])] = 1
-                fromarr = np.array(fromarr)
-                toarr = np.array(toarr)
-                edge_index = np.zeros((2,len(toarr)), dtype=np.long)
-                edge_index[0] = fromarr
-                edge_index[1] = toarr
-                y = np.zeros(1,dtype=np.float32)
-                y[0] = specdict[species[graph]]
-                y = torch.tensor(y, dtype=torch.long)
-                feat = torch.tensor(g, dtype=torch.float32)
-                edge_index = torch.tensor(edge_index, dtype=torch.long)
-                data = Data(x=feat, edge_index=edge_index, y=y)
-                data.graphind = int(graph)
-                donegraphs.append(data)
-            torch.save(donegraphs, datadir + '/processed_data/unknown/fold' + str(x+1) + 'dataset.pkl')
-        """
+            #torch.save(shufgraphs, datadir + '/processed_data/fold' + str(x+1) + 'shufdataset.pkl')
     return datadir

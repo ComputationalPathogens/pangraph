@@ -20,9 +20,9 @@ device = torch.device('cuda')
 ####
 
 class SAGPool(torch.nn.Module):
-    def __init__(self, num_layers, hidden, num_class, ratio=0.1):
+    def __init__(self, num_layers, hidden, num_class, featlen, ratio=0.1):
         super(SAGPool, self).__init__()
-        self.conv1 = GraphConv(656, hidden, aggr='mean')
+        self.conv1 = GraphConv(featlen, hidden, aggr='mean')
         self.convs = torch.nn.ModuleList()
         self.pools = torch.nn.ModuleList()
         self.convs.extend([
@@ -100,7 +100,6 @@ def build(datadir, meta, metapth):
         indspec[enc] = s
         enc += 1
     
-    #labels_unencoded.append('rev_mel')
     predictdict = {}
     graphpredicts = {}
     print("NUMCLASSES:%i" % (enc))
@@ -112,28 +111,28 @@ def build(datadir, meta, metapth):
     ####
     final_models = []
     final_features = []
-    final_labels = []
     final_train = []
-    final_train_y = []
-    final_unknown = []
     final_meta = []
-    final_importance = [[],[],[],[],[]]
+    #final_importance = [[],[],[],[],[]]
     
     for fold in range(5):
         print("Fold#: ", str(fold), datetime.now())
         donegraphs = torch.load(datadir + '/processed_data/fold' + str(fold+1) + 'dataset.pkl')
+        featuresize = len(donegraphs[0]['x'][0])
         if meta:
             metagraphs = torch.load(datadir + '/processed_data/' + metapth + 'fold' + str(fold+1) + 'dataset.pkl')
-        #unknowngraphs = torch.load(datadir + '/processed_data/unknown/fold' + str(fold+1) + 'dataset.pkl')
-        model = SAGPool(3, 512, enc)
+        model = SAGPool(3, 512, enc, featuresize)
         train_data = []
         test_data = []
+        
+        """
         meli = []
         abor = []
         suis = []
         cani = []
         ovis = []
         importance_graphs = []
+        """
         
         ####
         # Splitting fold dataset into train/test sets based on saved splits
@@ -144,17 +143,10 @@ def build(datadir, meta, metapth):
             else:
                 test_data.append(g)
                 
-        """
-        for x in range(len(metagraphs)):
-            if x % 2 == 0:
-                train_data.append(metagraphs[x])
-            else:
-                test_data.append(metagraphs[x])
-        print(x)
-        """    
         ####
         # Seperating graphs we want feature importance for
         ####
+        """
         for g in donegraphs:
             if g.y.item() == 5:
                 meli.append(g)
@@ -167,13 +159,13 @@ def build(datadir, meta, metapth):
             elif g.y.item() == 6:
                 ovis.append(g)
         importance_graphs = [meli, abor, suis, cani, ovis]
+        """
         
         ####
         # Training each folds model for 50 epochs, outputting accuracy of train/test set at each iteration
         ####
         train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
         test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
-        #unknown_loader = DataLoader(unknowngraphs, batch_size=1)
         if meta:
             meta_loader = DataLoader(metagraphs, batch_size=1, shuffle=False)
         device = torch.device('cuda')
@@ -198,7 +190,7 @@ def build(datadir, meta, metapth):
         # After this folds model is trained, pass it to feature importance module to extract important class features
         ####
 
-        specnames = ['melitensis', 'abortus', 'suis', 'canis', 'ovis']
+        #specnames = ['melitensis', 'abortus', 'suis', 'canis', 'ovis']
         #for ig in range(len(importance_graphs)):
             #print(specnames[ig])
         #final_importance[1].append(importance.importance(datadir, importance_graphs[1], model, int(fold),specnames[1]))
@@ -206,7 +198,6 @@ def build(datadir, meta, metapth):
         final_models.append(model)
         final_features.append(test_loader)
         final_train.append(train_loader)
-        #final_unknown.append(unknown_loader)
         if meta:
             final_meta.append(meta_loader)
         else:
@@ -236,7 +227,6 @@ def build(datadir, meta, metapth):
         correct = 0
         ytrue = []
         ypred = []
-        #upred = []
         mpred = []
         if meta:
             for d in mtest:
@@ -250,21 +240,6 @@ def build(datadir, meta, metapth):
                 print("METAPREDICTION: ", d.graphind, predmax)
             allmpred.append(mpred)
 
-        ####
-        # Apply models to unknown dataset and record predictions in file for comparision
-        ####
-        """
-        with open(datadir + '/processed_data/fold' + str(ind) + 'predicts.txt', 'w') as file:
-            for d in utest:
-                d = d.to(device)
-                m = m.to(device)
-                pred = m(d)
-                pred = pred.max(dim=1)[1]
-                upred.append(pred[0].item())
-                file.write(str(d.graphind.item()) + '\t' + str(pred[0].item()) + '\n')
-        print("PREDICTIONS ON UKNNOWN SET")
-        print(upred)
-        """
         ####
         # Applying model to regular testing set
         ####

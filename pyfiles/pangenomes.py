@@ -8,8 +8,7 @@ def pangenomes(datadir):
     ####
     #Skip this step if all 5 folds have already been created, need to do this so graph splits don't get re-done every time
     ####
-    checkpth = datadir + '/processed_data/fold5.gfa'
-    if os.path.isfile(checkpth):
+    if os.path.isfile(datadir + '/processed_data/fold5.gfa'):
         return datadir
     
     #Possibly make helper function for loading this in everywhere its used?
@@ -27,20 +26,17 @@ def pangenomes(datadir):
     test_splits = []
 
     for train_index, test_index in kf.split(paths, labels):
-        
         test_splits.append(test_index)
 
+    ###
+    #Hardcoding of all 5 iterations of split combinations
+    ###
     graphsplits = [np.concatenate((test_splits[0],test_splits[1],test_splits[2])),np.concatenate((test_splits[1],test_splits[2],test_splits[3])),np.concatenate((test_splits[2],test_splits[3],test_splits[4])),
                    np.concatenate((test_splits[0],test_splits[3],test_splits[4])),np.concatenate((test_splits[0],test_splits[1],test_splits[4]))]
     trainsplits = [test_splits[3],test_splits[4],test_splits[0],test_splits[1],test_splits[2]]
     testsplits = [test_splits[4],test_splits[0],test_splits[1],test_splits[2],test_splits[3]]
     
     ind = 0
-    with open('/home/liam/anthrax/pangraph/SL_Pangenome.txt', 'w') as f:       
-        for p in paths:    
-            f.write(datadir + p + '\n')
-        cmd = '/home/liam/bifrost/bifrost/build/src/Bifrost build -r ' + '/home/liam/anthrax/pangraph/SL_Pangenome.txt' + ' -o ' + datadir + '/processed_data/SL_Pangenome' + ' -t 128 -c'
-        os.system(cmd)
     ####
     #Building pangenome graph for each fold with 60% of the dataset
     ####

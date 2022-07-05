@@ -8,37 +8,6 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
-def model_eval(predict, label):
-    """
-    Parameters
-    ----------
-    predict : Predictions made by model as a list
-    label : Correct labels corresponding to predictions as a list
-    Returns
-    -------
-    accuracy : Accuracy of model with supplied predictions
-
-    """
-    accuracy = np.sum([predict[i]==label[i] for i in range(len(predict))])/len(predict)
-
-    return accuracy
-
-def load_models(modelnums):
-    models = []
-    features = []
-    labels = []
-    for num in modelnums:
-        bst = xgb.Booster()
-        file = str(num) + '.model'
-        filen = str(num) + '.npy'
-        bst.load_model(file)
-        temp = np.load(filen, allow_pickle=True)
-        models.append(bst)
-        features.append(temp.item().get('features'))
-        labels.append(temp.item().get('labels'))
-
-    return models, features, labels
-
 def load_data(dataloc, filenamenp = '/processed_data/featuresfiltered.pkl', filenamecsv = '/processed_data/counts.csv'):
     """
     Parameters
@@ -54,7 +23,6 @@ def load_data(dataloc, filenamenp = '/processed_data/featuresfiltered.pkl', file
     """
     datapth = dataloc + filenamenp
     labelpth = dataloc + filenamecsv
-    #data = np.load(datapth, allow_pickle=True)
     data = pd.read_pickle(datapth)
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
     labels = pd.read_csv(labelpth, names=colnames)
@@ -85,7 +53,6 @@ def train_model(k, features, labels, unencoded_labels, save, datadir):
     """
     params = {'objective':'multi:softmax', 'num_class': '11', 'max_depth': '12'}
     splits = np.load(datadir + '/processed_data/foldsplits.npy', allow_pickle=True)
-    #unknown = pd.read_pickle(datadir + '/processed_data/unknownfeatures.pkl')
     count = 0
     num_feats = 2000000
     final_models = []
@@ -108,32 +75,32 @@ def train_model(k, features, labels, unencoded_labels, save, datadir):
 
         Xtrain = sk_obj.fit_transform(Xtrain, Ytrain)
         Xtest = sk_obj.transform(Xtest)
-        #utrain = sk_obj.transform(unknown)
         featmask = sk_obj.get_support()
         featnames = features.columns[featmask]
         xgb_matrix = xgb.DMatrix(Xtrain, label=Ytrain, feature_names=featnames)
         booster = xgb.train(params, xgb_matrix)
         xgb_test = xgb.DMatrix(Xtest, feature_names=featnames)
-        #xgb_unk = xgb.DMatrix(utrain, feature_names=featnames)
 
         final_models.append(booster)
         final_features.append(xgb_test)
         final_labels.append(Ytest)
         final_train.append(Xtrain)
         final_train_y.append(Ytrain)
-        #final_unknown.append(xgb_unk)
+        """
+        #Feature Importance Code
         shapimp = shap.TreeExplainer(booster)
         shap_vals = shapimp.shap_values(xgb_matrix)
         shap.summary_plot(shap_vals, Xtrain, show=False)
         plt.savefig('shapplot.png')
-        #sortimp = {k: v for k, v in sorted(getimp.items(), key=lambda item: item[1], reverse=True)}
+        sortimp = {k: v for k, v in sorted(getimp.items(), key=lambda item: item[1], reverse=True)}
+        """
 
-    test_model(final_models, final_features, final_labels, unencoded_labels, final_unknown, datadir)
+    test_model(final_models, final_features, final_labels, unencoded_labels, datadir)
     return final_models, final_features, final_labels
 
-def test_model(final_models, final_features, final_labels, labels_unencoded, final_unknown, datadir):
+def test_model(final_models, final_features, final_labels, labels_unencoded, datadir):
     count = 0
-    for model, xtest, ytest, utest in zip(final_models, final_features, final_labels, final_unknown):
+    for model, xtest, ytest in zip(final_models, final_features, final_labels):
         count+=1
         xgb_test_matrix = xtest
         prediction = model.predict(xgb_test_matrix)
@@ -145,10 +112,4 @@ def test_model(final_models, final_features, final_labels, labels_unencoded, fin
         prec_recall.to_csv(model_report)
         print(accuracy)
         print(prec_recall)
-        print("UNKNOWN")
-        #prediction = model.predict(utest)
-        #with open(datadir + '/processed_data/fold' + str(count) + 'predicts.txt','w') as file:
-        #    for x in range(len(prediction)):
-        #        file.write(str(x) + '\t' + str(prediction[x]) + '\n')
-        print(prediction)
     return
