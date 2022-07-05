@@ -7,6 +7,8 @@ params.datadir = "$baseDir"
 params.ksize = 11
 params.meta = false
 params.metapth = ""
+params.customtargets = false
+params.customtargetspath = ""
 
 nextflow.enable.dsl = 2
 
@@ -18,6 +20,7 @@ include { QUERY } from './workflow/query'
 include { PANGENOMES } from './workflow/pangenomes'
 include { DATASET } from './workflow/dataset'
 include { MODEL } from './workflow/model'
+include { CUSTOMTARGETS } './workflow/customtargets'
 
 workflow {
 	if(params.download == true) {
@@ -26,6 +29,9 @@ workflow {
         
 	} else {
     METADATA(params.k, params.datadir)
+    if (params.customtargets == true) {
+        CUSTOMTARGETS(METADATA.out,params.customtargetspath)
+    }
     PANGENOMES(METADATA.out)
     MAKEGRAPHS(PANGENOMES.out)
     MAKEFASTA(MAKEGRAPHS.out)

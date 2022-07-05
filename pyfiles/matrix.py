@@ -134,10 +134,10 @@ def build_matrix(datadir, filename = '/processed_data/counts.csv'):
         colsums = presdf.sum(axis=0)
         filtered = []
         for c,s in colsums.items():
-            if s >= 5:
+            if s >= 5 and s < numrows-5:
                 filtered.append(c)
         filtersaves = datadir + '/processed_data/featuresfiltered.pkl'
-        filtereddf = presdf.filter(filtered, axis=1)
+        filtereddf = matrixdf.filter(filtered, axis=1)
         filtereddf.to_pickle(filtersaves)
         filtereddf.to_feather('filteredunitigs.feather')
     return datadir

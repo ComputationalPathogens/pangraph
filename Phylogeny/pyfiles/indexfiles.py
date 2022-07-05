@@ -6,7 +6,7 @@ import re
 from collections import Counter
 
 
-def build_index(datadir, filename = '/processed_data/metadata.csv'):
+def build_index(datadir, dname):
 
     """
     Parameters
@@ -23,19 +23,12 @@ def build_index(datadir, filename = '/processed_data/metadata.csv'):
     for complete genome sequences/kmer counts
 
     """
-    filepth = datadir + filename
-    datapth = datadir + '/samples/'
+    filepth = datadir + '/processed_data/' + str(dname) + '_metadata.csv'
+    datapth = datadir + '/samples/' + str(dname) + '/'
     f = open(filepth, 'w', newline='')
     writer = csv.writer(f)
     id = -1
     
-    labelpth = '/home/liam/largekmer/pathogen-pipeline/processed_data/truth.csv'
-    colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
-    spread = pd.read_csv(labelpth, names=colnames)
-    labels = spread.species.tolist()
-    genuses = spread.genus.tolist()
-    
-
     meta = re.compile("Date|Submitter|Assembly method|Genome coverage|Sequencing technology")
     #change over to use pandas write_csv
     for subdir, dirs, files in os.walk(datapth):

@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import sys
 
-def create(datadir):
+def create(datadir, dname):
     sys.setrecursionlimit(100000)
     colnames=['id','assembly','genus','species','seqfile','cntfile', 'meta']
-    data = pd.read_pickle(datadir+'/processed_data/featuresfiltered.pkl')
+    data = pd.read_pickle(datadir+'/processed_data/' + str(dname) + '_featuresfiltered.pkl')
     labels = pd.read_csv(datadir+'/processed_data/counts.csv', names=colnames)
     labels = labels.species.tolist()
     data.index = labels
@@ -32,6 +32,6 @@ def create(datadir):
     plt.legend(handles, lut, title='Species',
                bbox_to_anchor=(1, 1), bbox_transform=plt.gcf().transFigure, loc='upper right')
     
-    snsplot.savefig(datadir+"/processed_data/ClusterMap.png")
+    snsplot.savefig(datadir+"/processed_data/" + str(dname) + "_ClusterMap.png")
     return snsplot
 

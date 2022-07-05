@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-def count_kmer(rootdir, ksize = 31, filename = '/processed_data/metadata.csv'):
+def count_kmer(rootdir, ksize = 31, dname = 'none'):
     """
     Parameters
     ----------
@@ -18,7 +18,7 @@ def count_kmer(rootdir, ksize = 31, filename = '/processed_data/metadata.csv'):
 
     """
     #Could potentially be done with multiprocessing instead although this doesnt take much time anyway
-    filepath = rootdir + filename
+    filepath = rootdir + '/processed_data/' + str(dname) + '_metadata.csv'
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
     dumpname = 'mer_counts_dumpsbf.fa'
 
@@ -59,6 +59,6 @@ def count_kmer(rootdir, ksize = 31, filename = '/processed_data/metadata.csv'):
             dumppth = "error"
             data.at[id,'cntfile'] = cntname
             id = id + 1
-    filepath = rootdir + '/processed_data/counts.csv'
+    filepath = rootdir + '/processed_data/' + str(dname) + '_counts.csv'
     data.to_csv(filepath, index=False, header=False)
     return rootdir

@@ -2,7 +2,8 @@
 process MATRIX {
 	input:
 	  val(datadir)
-
+	  val(dname)
+	  
 	output:
 	  val(datadir)
 
@@ -15,7 +16,7 @@ process MATRIX {
 	sys.path.append("$baseDir/pyfiles/")
 	import matrix
 
-	out = matrix.build_matrix("$datadir")
+	out = matrix.build_matrix("$datadir", "$dname")
 	print(out, end = '')
 	"""
 }

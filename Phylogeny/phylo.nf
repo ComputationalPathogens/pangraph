@@ -3,6 +3,7 @@ params.datadir = "$baseDir"
 params.virus = false
 params.virusfile = ''
 params.plot = false
+params.dname = 'coronavirus'
 
 nextflow.enable.dsl = 2
 
@@ -17,19 +18,19 @@ include { HCLUST } from './workflow/hclust'
 
 workflow {
     if (params.virus == true) {
-        SEPERATE(params.datadir, params.virusfile)
-        INDEX(SEPERATE.out)
+        SEPERATE(params.datadir, params.virusfile, params.dname)
+        INDEX(SEPERATE.out, params.dname)
     } else {
-        INDEX(params.datadir)
+        INDEX(params.datadir, params.dname)
     }
-    COUNTS(INDEX.out)
-    MATRIX(COUNTS.out)
+    COUNTS(INDEX.out, params.dname)
+    MATRIX(COUNTS.out, params.dname)
     if (params.plot == true) {
-        PLOT(MATRIX.out)
+        PLOT(MATRIX.out, params.dname)
     }
-    CONVERT(MATRIX.out)
-    IQTREE(CONVERT.out)
-    HCLUST(IQTREE.out)
+    CONVERT(MATRIX.out, params.dname)
+    IQTREE(CONVERT.out, params.dname)
+    HCLUST(IQTREE.out, params.dname)
 }
 
 workflow.onComplete {

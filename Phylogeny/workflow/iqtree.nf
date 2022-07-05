@@ -2,6 +2,7 @@
 process IQTREE {
 	input:
 	  val(datadir)
+	  val(dname)
 
 	output:
 	  val(datadir)

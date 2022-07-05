@@ -2,6 +2,7 @@
 process CONVERT {
 	input:
 	  val(datadir)
+	  val(dname)
 
 	output:
 	  val(datadir)
@@ -15,7 +16,7 @@ process CONVERT {
 	sys.path.append("$baseDir/pyfiles/")
 	import convert
 
-	out = convert.convert_matrix("$datadir")
+	out = convert.convert_matrix("$datadir", "$dname")
 	print(out, end = '')
 	"""
 }

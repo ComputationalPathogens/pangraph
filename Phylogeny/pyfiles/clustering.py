@@ -3,8 +3,6 @@ import sys
 import ast
 import scipy.cluster
 from sklearn.feature_selection import SelectKBest, f_classif
-from collections import Counter
-from sklearn.feature_selection import VarianceThreshold
 
 def build_data(datadir):
     data = pd.read_pickle(datadir + '/processed_data/featuresfiltered.pkl')
@@ -29,7 +27,7 @@ def build_data(datadir):
     kbestdata = sel.fit_transform(data,labels)
     kbestmask = sel.get_support()
     kbestlabels = data.columns[kbestmask]
-    kbestdf = pd.DataFrame(kbestdata, columns=kbestlabels)
+    kbestdf = pd.DataFrame(kbestdata, columns=kbestlabels, dtype=float)
     kbestdf.index = labels
     return kbestdf, meta
 
@@ -48,22 +46,19 @@ def kmeans(data, k):
 def comp_clusters(datadir, numclust):
     sys.setrecursionlimit(100000)
     data,meta = build_data(datadir)
-    
+      
+    print("Starting kClustering")
+    kClust = kmeans(data,numclust)    
+    with open(datadir + '/processed_data/kclust.txt', 'w') as f:        
+        for h in kClust:
+            f.write('Kmeans Cluster #' + str(h) + '\n')
+    print("Starting hClustering")
     hClust = hierarchal(data, numclust)
     
-    index = 0
-    
-
-    for h in hClust:
-        print("HClust#: ", h)
-        index += 1
-    
-    with open(datadir + '/processed_data/hclust2.txt', 'w') as f:        
+    with open(datadir + '/processed_data/hclust.txt', 'w') as f:        
         for h in hClust:
             f.write('Hierarchal Cluster #' + str(h) + '\n')
-            print("Hierarchal Cluster #", h)
-    
-    
+
     
 
-comp_clusters('/home/liam/Phylogeny', 25)
+comp_clusters('/home/liam/Phylogeny', 10)

@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-def convert_matrix(dataloc, filenamenp = '/processed_data/featuresfiltered.pkl', filenamecsv = '/processed_data/cleanwcounts.csv'):
+def convert_matrix(dataloc, dname):
     """
     Parameters
     ----------
@@ -14,9 +14,9 @@ def convert_matrix(dataloc, filenamenp = '/processed_data/featuresfiltered.pkl',
     label_encoder.classes_ : the unencoded classes the model is being trained on
     
     """
-    if os.path.isfile(dataloc + '/processed_data/kmercounts.fasta'):
+    if os.path.isfile(dataloc + '/processed_data/' + str(dname) + '_kmercounts.fasta'):
         return dataloc
-    datapth = dataloc + filenamenp
+    datapth = dataloc + '/processed_data/' + str(dname) + '_featuresfiltered.pkl'
     data = pd.read_pickle(datapth)
     matrix = data.values.tolist()
     encodedstrs = []
@@ -29,7 +29,7 @@ def convert_matrix(dataloc, filenamenp = '/processed_data/featuresfiltered.pkl',
                 tempstr += hex(n)[2]
         encodedstrs.append(tempstr)
     id = 0
-    with open(dataloc + '/processed_data/kmercounts.fasta', 'w') as wf:
+    with open(dataloc + '/processed_data/' + str(dname) + '_kmercounts.fasta', 'w') as wf:
         for s in encodedstrs:
             wf.write('>' + str(id) + '\n')
             id += 1

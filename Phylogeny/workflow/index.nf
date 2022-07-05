@@ -2,6 +2,7 @@
 process INDEX {
 	input:
 	  val(datadir)
+	  val(dname)
 
 	output:
 	  val(datadir)
@@ -15,7 +16,7 @@ process INDEX {
 	sys.path.append("$baseDir/pyfiles/")
 	import indexfiles
 
-	out = indexfiles.build_index("$datadir")
+	out = indexfiles.build_index("$datadir", "$dname")
 	print(out, end = '')
 	"""
 }
