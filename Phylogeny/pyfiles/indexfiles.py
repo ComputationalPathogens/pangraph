@@ -44,19 +44,19 @@ def build_index(datadir, dname):
             if ext == ".fna":
                 temp = os.path.basename(subdir)
                 name = os.path.splitext(file)[0]
-                pth = '/samples/' + temp + '/' + name + '.fna'
+                pth = '/samples/' + str(dname) + '/' + temp + '/' + name + '.fna'
                 id += 1
             if ext == ".fasta":
                 temp = os.path.basename(subdir)
                 name = os.path.splitext(file)[0]
-                pth = '/samples/' + temp + '/' + name + '.fasta'
+                pth = '/samples/' + str(dname) + '/' + temp + '/' + name + '.fasta'
                 id += 1
             if ext == ".gz":
                 temp = os.path.basename(subdir)
                 extr = os.path.splitext(file)[0]
                 name = os.path.splitext(extr)[0]
                 fastapth = datapth + temp + '/' +  extr
-                pth = '/samples/' + temp + '/' + name + '.fna'
+                pth = '/samples/' + str(dname) + '/' + temp + '/' + name + '.fna'
                 cmd = 'gunzip ' + fastapth
                 os.system(cmd)
             if ext == ".txt":

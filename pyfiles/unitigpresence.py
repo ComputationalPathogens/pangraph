@@ -4,7 +4,8 @@ from Bio import Seq, SeqIO
 
 
 
-def get_presence(datadir):
+def main():
+    datadir = '/home/liam/anthrax/pangraph'
     #splits = np.load(datadir + '/processed_data/foldsplits.npy', allow_pickle=True)
     #graph_loader = DataLoader(graphs, batch_size=1)
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
@@ -48,4 +49,5 @@ def get_presence(datadir):
                 lnum += 1
             tig_matrix[i,:] = genome_row
     matrixdf = pd.DataFrame(tig_matrix,columns=baseunitigs.keys())
-    print(matrixdf)
+    matrixdf.to_pickle(datadir + '/unitigmatrix.pkl')
+main()

@@ -10,9 +10,9 @@ def create(datadir, dname):
     sys.setrecursionlimit(100000)
     colnames=['id','assembly','genus','species','seqfile','cntfile', 'meta']
     data = pd.read_pickle(datadir+'/processed_data/' + str(dname) + '_featuresfiltered.pkl')
-    labels = pd.read_csv(datadir+'/processed_data/counts.csv', names=colnames)
+    labels = pd.read_csv(datadir+'/processed_data/' + str(dname) + '_counts.csv', names=colnames)
     labels = labels.species.tolist()
-    data.index = labels
+    data.index = [x for x in range(len(data))]
     label_enc = LabelEncoder()
     label_enc = label_enc.fit(labels)
     clrs = sns.color_palette("husl",14)
@@ -20,18 +20,17 @@ def create(datadir, dname):
     rowclrs = []
     for x in labels:
         rowclrs.append(lut[x])
-    
     sel = SelectKBest(f_classif,k=10000)
     kbestdata = sel.fit_transform(data,labels)
     kbestmask = sel.get_support()
     kbestlabels = data.columns[kbestmask]
     kbestdf = pd.DataFrame(kbestdata, columns=kbestlabels)
-    kbestdf.index = labels
-    snsplot = sns.clustermap(kbestdf, row_colors=rowclrs, vmin = 0, vmax = 10, method='complete')
+    kbestdf.index = [x for x in range(len(data))]
+    snsplot = sns.clustermap(data, cmap='flare',row_colors=rowclrs, vmin = 0, vmax = 5, method='average',row_cluster = True,col_cluster=False)
     handles = [Patch(facecolor=lut[name]) for name in lut]
+    snsplot.savefig(datadir+"/processed_data/" + str(dname) + "_ClusterMap.png")
+    return snsplot
     plt.legend(handles, lut, title='Species',
                bbox_to_anchor=(1, 1), bbox_transform=plt.gcf().transFigure, loc='upper right')
     
-    snsplot.savefig(datadir+"/processed_data/" + str(dname) + "_ClusterMap.png")
-    return snsplot
 
