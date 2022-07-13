@@ -5,6 +5,7 @@ process MODEL {
 	  val(datadir)
 	  val(meta)
 	  val(metapth)
+	  val(dname)
 
 	output:
 	  stdout emit: filename
@@ -19,7 +20,7 @@ from pyfiles import graphmodel
 data = "$datadir"
 meta = "$meta"
 metapth = "$metapth"
-out = graphmodel.build(data, meta, metapth)
+out = graphmodel.build(data, meta, metapth, "$dname")
 print(out, end = '')
 	"""
 }

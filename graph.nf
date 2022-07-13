@@ -9,6 +9,7 @@ params.meta = false
 params.metapth = ""
 params.customtargets = false
 params.customtargetspath = ""
+params.dname = ""
 
 nextflow.enable.dsl = 2
 
@@ -24,20 +25,20 @@ include { CUSTOMTARGETS } './workflow/customtargets'
 
 workflow {
 	if(params.download == true) {
-		DOWNLOAD(params.datadir, params.genera)
-		METADATA(params.k, DOWNLOAD.out)
+		DOWNLOAD(params.datadir, params.genera, params.dname)
+		METADATA(params.k, DOWNLOAD.out, params.dname)
         
 	} else {
-    METADATA(params.k, params.datadir)
+    METADATA(params.k, params.datadir, params.dname)
     if (params.customtargets == true) {
-        CUSTOMTARGETS(METADATA.out,params.customtargetspath)
+        CUSTOMTARGETS(METADATA.out,params.customtargetspath, params.dname)
     }
-    PANGENOMES(METADATA.out)
-    MAKEGRAPHS(PANGENOMES.out)
-    MAKEFASTA(MAKEGRAPHS.out)
-    QUERY(MAKEFASTA.out)
-    DATASET(QUERY.out)
-    MODEL(DATASET.out, params.meta, params.metapth)
+    PANGENOMES(METADATA.out, params.dname)
+    MAKEGRAPHS(PANGENOMES.out, params.dname)
+    MAKEFASTA(MAKEGRAPHS.out, params.dname)
+    QUERY(MAKEFASTA.out, params.dname)
+    DATASET(QUERY.out, params.dname)
+    MODEL(DATASET.out, params.meta, params.metapth, params.dname)
     }
 }
 

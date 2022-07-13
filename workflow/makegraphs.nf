@@ -3,6 +3,7 @@ process MAKEGRAPHS {
     echo true
 	input:
 	  val(datadir)
+	  val(dname)
 
 	output:
 	  val(datadir)
@@ -14,7 +15,7 @@ import sys
 sys.path.append("$baseDir")
 from pyfiles import creategraphs
 data = "$datadir"
-out = creategraphs.create(data)
+out = creategraphs.create(data, "$dname")
 print(out, end = '')
 	"""
 }

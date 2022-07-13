@@ -78,14 +78,14 @@ def get_acc(loader, model):
     return accuracy
     
 
-def build(datadir, meta, metapth):
+def build(datadir, meta, metapth, dname):
     ####
     # Turn into helper function??
     ####
     meta = False
-    splits = np.load(datadir + '/processed_data/foldsplits.npy', allow_pickle=True)
+    splits = np.load(datadir + '/processed_data/' + str(dname) + '_foldsplits.npy', allow_pickle=True)
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
-    samples = pd.read_csv(datadir + '/processed_data/clean.csv', names=colnames)
+    samples = pd.read_csv(datadir + '/processed_data/' + str(dname) + '_clean.csv', names=colnames)
     species = samples.species.tolist()
     enc = 0
     indspec = {}
@@ -117,7 +117,7 @@ def build(datadir, meta, metapth):
     
     for fold in range(5):
         print("Fold#: ", str(fold), datetime.now())
-        donegraphs = torch.load(datadir + '/processed_data/fold' + str(fold+1) + 'dataset.pkl')
+        donegraphs = torch.load(datadir + '/processed_data/' + str(dname) + '_fold' + str(fold+1) + 'dataset.pkl')
         featuresize = len(donegraphs[0]['x'][0])
         if meta:
             metagraphs = torch.load(datadir + '/processed_data/' + metapth + 'fold' + str(fold+1) + 'dataset.pkl')
@@ -268,7 +268,7 @@ def build(datadir, meta, metapth):
         prec_recall = precision_recall_fscore_support(ytrue,ypred)
         prec_recall = np.transpose(prec_recall)
         prec_recall = pd.DataFrame(data=prec_recall, index=labels_unencoded, columns=['Precision','Recall','F-Score','Supports'])
-        model_report = datadir + '/processed_data/' + str(ind) + 'summary.csv'
+        model_report = datadir + '/processed_data/' + str(dname) + '_' + str(ind) + 'summary.csv'
         print(model_report)
         print(prec_recall)
         prec_recall.to_csv(model_report)

@@ -6,10 +6,11 @@ workflow METADATA {
 	take:
 	  k
 	  datadir
+	  dname
 
 	main:
-	  PROCESSFILES(datadir)
-	  CLEANFILES(k, PROCESSFILES.out)
+	  PROCESSFILES(datadir, dname)
+	  CLEANFILES(k, PROCESSFILES.out, dname)
 
 	emit:
 	  CLEANFILES.out

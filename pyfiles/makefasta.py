@@ -1,22 +1,27 @@
 import os
 import pandas as pd
 
-def create(datadir):
+def create(datadir, dname):
     
     ####
     #Data loader helper function?
     ####
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
-    loadpth = datadir + '/processed_data/clean.csv'
+    loadpth = datadir + '/processed_data/' + str(dname) + '_clean.csv'
     readcsv = pd.read_csv(loadpth, names=colnames)
     inds = readcsv.id.tolist()
     
     ####
     # Making .fasta files for the individual graph dataset, used for queries and other steps
     ####
+    try:
+        mkpth = datadir + '/processed_data/' + str(dname) + '_fasta/'
+        os.mkdir(mkpth)
+    except OSError:
+        pass
     for ind in inds:
-        openpth = datadir + '/processed_data/graphs/graph' + str(ind) + '.gfa'
-        writepth = datadir + '/processed_data/fasta/graph' + str(ind) + '.fasta'
+        openpth = datadir + '/processed_data/' + str(dname) + '_graphs/graph' + str(ind) + '.gfa'
+        writepth = datadir + '/processed_data/' + str(dname) + '_fasta/graph' + str(ind) + '.fasta'
         if os.path.isfile(writepth):
             continue
         with open(openpth, 'r') as f:

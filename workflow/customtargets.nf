@@ -4,6 +4,7 @@ process CUSTOMTARGETS {
 	input:
 	  val(datadir)
 	  val(targpth)
+	  val(dname)
 
 	output:
 	  val(datadir)
@@ -16,7 +17,7 @@ sys.path.append("$baseDir")
 from pyfiles import updatetargets
 data = "$datadir"
 targets = "$targpth"
-out = updatetargets.update_targets(data,targets)
+out = updatetargets.update_targets(data,targets, "$dname")
 print(out, end = '')
 	"""
 }

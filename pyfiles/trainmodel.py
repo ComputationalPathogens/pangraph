@@ -8,7 +8,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
-def load_data(dataloc, filenamenp = '/processed_data/featuresfiltered.pkl', filenamecsv = '/processed_data/counts.csv'):
+def load_data(dataloc, dname):
     """
     Parameters
     ----------
@@ -21,8 +21,8 @@ def load_data(dataloc, filenamenp = '/processed_data/featuresfiltered.pkl', file
     label_encoder.classes_ : the unencoded classes the model is being trained on
     
     """
-    datapth = dataloc + filenamenp
-    labelpth = dataloc + filenamecsv
+    datapth = dataloc + '/processed_data/' + str(dname) + '_featuresfiltered.pkl'
+    labelpth = dataloc + '/processed_data/' + str(dname) + '_counts.csv'
     data = pd.read_pickle(datapth)
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
     labels = pd.read_csv(labelpth, names=colnames)
@@ -43,7 +43,7 @@ def load_data(dataloc, filenamenp = '/processed_data/featuresfiltered.pkl', file
     return data, encoded, labels_unencoded
 
 
-def train_model(k, features, labels, unencoded_labels, save, datadir):
+def train_model(k, features, labels, unencoded_labels, save, datadir, dname):
     """
     k - amount of folds if doing cross fold validation (1 if not)
     features - x_train
@@ -52,7 +52,7 @@ def train_model(k, features, labels, unencoded_labels, save, datadir):
     save - true to save models, false if not saving, also saves test data fold for accompanying model
     """
     params = {'objective':'multi:softmax', 'num_class': '11', 'max_depth': '12'}
-    splits = np.load(datadir + '/processed_data/foldsplits.npy', allow_pickle=True)
+    splits = np.load(datadir + '/processed_data/' + str(dname) + '_foldsplits.npy', allow_pickle=True)
     count = 0
     num_feats = 2000000
     final_models = []
@@ -95,10 +95,10 @@ def train_model(k, features, labels, unencoded_labels, save, datadir):
         sortimp = {k: v for k, v in sorted(getimp.items(), key=lambda item: item[1], reverse=True)}
         """
 
-    test_model(final_models, final_features, final_labels, unencoded_labels, datadir)
+    test_model(final_models, final_features, final_labels, unencoded_labels, datadir, dname)
     return final_models, final_features, final_labels
 
-def test_model(final_models, final_features, final_labels, labels_unencoded, datadir):
+def test_model(final_models, final_features, final_labels, labels_unencoded, datadir, dname):
     count = 0
     for model, xtest, ytest in zip(final_models, final_features, final_labels):
         count+=1
@@ -108,7 +108,7 @@ def test_model(final_models, final_features, final_labels, labels_unencoded, dat
         prec_recall = precision_recall_fscore_support(ytest, prediction, average=None)
         prec_recall = np.transpose(prec_recall)
         prec_recall = pd.DataFrame(data=prec_recall, index=labels_unencoded, columns=['Precision','Recall','F-Score','Supports'])
-        model_report = datadir + '/processed_data/' + str(count) + 'summary.csv'
+        model_report = datadir + '/processed_data/' + str(dname) + '_' + str(count) + 'summary.csv'
         prec_recall.to_csv(model_report)
         print(accuracy)
         print(prec_recall)

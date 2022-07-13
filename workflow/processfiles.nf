@@ -3,6 +3,7 @@ process PROCESSFILES {
 	echo true
 	input:
 	  val(datadir)
+	  val(dname)
 
 	output:
 	  stdout emit: out
@@ -16,7 +17,7 @@ process PROCESSFILES {
 	sys.path.append("$baseDir/pyfiles/")
 	import metadata
 
-	out = metadata.build_metadata("$datadir")
+	out = metadata.build_metadata("$datadir", "$dname")
 	print(out, end = '')
 	"""
 }

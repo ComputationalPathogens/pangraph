@@ -6,7 +6,7 @@ import re
 from collections import Counter
 
 
-def build_metadata(datadir, filename = '/processed_data/metadata.csv'):
+def build_metadata(datadir, dname):
 
     """
     Parameters
@@ -23,8 +23,8 @@ def build_metadata(datadir, filename = '/processed_data/metadata.csv'):
     for complete genome sequences/kmer counts
 
     """
-    filepth = datadir + filename
-    datapth = datadir + '/refseq/bacteria/'
+    filepth = datadir + '/processed_data/' + str(dname) + '_metadata.csv'
+    datapth = datadir + '/samples/' + str(dname) + '/'
     f = open(filepth, 'w', newline='')
     writer = csv.writer(f)
     id = -1
@@ -37,22 +37,24 @@ def build_metadata(datadir, filename = '/processed_data/metadata.csv'):
         dirs.sort()
         files.sort()
         metadict = {}
+        ext = ''
         pth, assembly, organism, genus, species, cnt = 'empty', 'empty', 'empty', 'empty', 'empty', 'empty'
         for file in files:
             ext = os.path.splitext(file)[-1].lower()
-            if ext == ".fna" or ext == '.fasta':
+            if ext == ".fna":
                 temp = os.path.basename(subdir)
                 name = os.path.splitext(file)[0]
-                if ext == '.fna':
-                        pth = '/refseq/bacteria/' + temp + '/' + name + '.fna'
-                else:
-                        pth = '/refseq/bacteria/' + temp + '/' + name + '.fasta'
+                pth = '/samples/' + str(dname) + '/' + temp + '/' + name + '.fna'
+            if ext == ".fasta":
+                temp = os.path.basename(subdir)
+                name = os.path.splitext(file)[0]
+                pth = '/samples/' + str(dname) + '/' + temp + '/' + name + '.fasta'
             if ext == ".gz":
                 temp = os.path.basename(subdir)
                 extr = os.path.splitext(file)[0]
                 name = os.path.splitext(extr)[0]
                 fastapth = datapth + temp + '/' +  extr
-                pth = '/refseq/bacteria/' + temp + '/' + name + '.fna'
+                pth = '/samples/' + str(dname) + '/' + temp + '/' + name + '.fna'
                 cmd = 'gunzip ' + fastapth
                 os.system(cmd)
             if ext == ".txt":
@@ -70,15 +72,14 @@ def build_metadata(datadir, filename = '/processed_data/metadata.csv'):
                     species = "unknown"
                 for l in lines[2:]:
                     if meta.search(l):
-                        metadict[str(meta.search(l)[0])] = str(re.split(': +', str(meta.split(l)[1]))[1])[:-1]
-                        
+                        metadict[str(meta.search(l)[0])] = str(re.split(': +', str(meta.split(l)[1]))[1])[:-1]                 
         if id > -1:
             writer.writerow([id, assembly, genus, species, pth, cnt, metadict])
         id += 1
 
     return datadir
 
-def clean_outliers(k, datadir, filename = '/processed_data/metadata.csv'):
+def clean_outliers(k, datadir, dname):
     """
     Parameters
     ----------
@@ -99,7 +100,7 @@ def clean_outliers(k, datadir, filename = '/processed_data/metadata.csv'):
     """
     k = int(k)
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
-    csvpth = datadir + filename
+    csvpth = datadir + '/processed_data/' + str(dname) + '_metadata.csv'
     data2 = pd.read_csv(csvpth, names=colnames)
     species = data2.species.tolist()
     labels = np.asarray(species)
@@ -113,7 +114,7 @@ def clean_outliers(k, datadir, filename = '/processed_data/metadata.csv'):
             data2.drop(index, axis=0, inplace=True)
     data2.reset_index(drop=True,inplace=True)
     newinds = []
-    with open(datadir + '/processed_data/unknownset.txt', 'w') as f:
+    with open(datadir + '/processed_data/' + str(dname) + '_unknownset.txt', 'w') as f:
         for file in brucunknown:
             f.write(datadir + file + '\n')
     for x in range(len(data2.index)):
@@ -121,6 +122,6 @@ def clean_outliers(k, datadir, filename = '/processed_data/metadata.csv'):
     newinds = {'id':newinds}
     newinds = pd.DataFrame(newinds)
     data2['id'] = newinds['id']
-    cleanpth = datadir + '/processed_data/clean.csv'
+    cleanpth = datadir + '/processed_data/' + str(dname) + '_clean.csv'
     data2.to_csv(cleanpth, index=False, header=False)
     return datadir

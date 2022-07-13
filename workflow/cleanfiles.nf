@@ -4,6 +4,7 @@ process CLEANFILES {
 	input:
 	  val(k)
 	  val(datadir)
+	  val(dname)
 
 	output:
 	  stdout emit: out
@@ -16,7 +17,7 @@ process CLEANFILES {
     import metadata
     k = "$k"
     data = "$datadir"
-    out = metadata.clean_outliers(k, data)
+    out = metadata.clean_outliers(k, data, "$dname")
     print(out, end = '')
     """
 }

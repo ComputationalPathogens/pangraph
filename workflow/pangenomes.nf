@@ -3,7 +3,8 @@ process PANGENOMES {
     echo true
 	input:
 	  val(datadir)
-
+	  val(dname)
+	  
 	output:
 	  val(datadir)
 
@@ -14,7 +15,7 @@ process PANGENOMES {
 	sys.path.append("$baseDir")
 	from pyfiles import pangenomes
 	data = "$datadir"
-	out = pangenomes.pangenomes(data)
+	out = pangenomes.pangenomes(data, "$dname")
 	print(out, end = '')
 	"""
 }

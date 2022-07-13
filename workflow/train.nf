@@ -7,10 +7,11 @@ workflow TRAIN {
 		k
 		datapth
 		model
+		dname
 
 	main:
 		if(model == 'xgb') {
-			TRAINXGB(k, datapth)
+			TRAINXGB(k, datapth, dname)
 			finalmsg = TRAINXGB.out
 		} else {
 			TRAINKERAS(k, datapth)

@@ -4,14 +4,14 @@ import torch
 import os
 from torch_geometric.data import Data
 
-def build_folds(datadir):
+def build_folds(datadir, dname):
     
     ####
     # Helper Function?
     ####
-    splits = np.load(datadir + '/processed_data/foldsplits.npy', allow_pickle=True)
+    splits = np.load(datadir + '/processed_data/' + str(dname) + '_foldsplits.npy', allow_pickle=True)
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
-    samples = pd.read_csv(datadir + '/processed_data/clean.csv', names=colnames)
+    samples = pd.read_csv(datadir + '/processed_data/' + str(dname) + '_clean.csv', names=colnames)
     species = samples.species.tolist()
     specdict = {}
     indspec = {}
@@ -34,12 +34,12 @@ def build_folds(datadir):
         colours = []
         newgraphc = 0
         graphfeatlength = 0
-        with open(datadir + '/processed_data/fold' + str(x+1) + 'graphsamples.txt', 'r') as f:
+        with open(datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + 'graphsamples.txt', 'r') as f:
             for l in f:
                 temp = str.rsplit(l)[0]
                 colours.append(temp)
                 graphfeatlength += 1
-        if not os.path.isfile(datadir + '/processed_data/fold' + str(x+1) + 'dataset.pkl'):
+        if not os.path.isfile(datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + 'dataset.pkl'):
             donegraphs = []
             shufgraphs = []
             foldsplits = np.concatenate((splits[0][x],splits[2][x]), axis=0)
@@ -48,7 +48,7 @@ def build_folds(datadir):
             ####
             for graph in foldsplits:
                 graphseqs = []
-                graphname = datadir + '/processed_data/graphs/graph' + str(graph) + '.gfa'
+                graphname = datadir + '/processed_data/' + str(dname) + '_graphs/graph' + str(graph) + '.gfa'
                 with open(graphname, 'r') as f:
                     numnodes = 0
                     fromarr = []
@@ -71,7 +71,7 @@ def build_folds(datadir):
                 ####
                 # Collecting presence/absence vectors from the queries done in last step
                 ####
-                graphname = datadir + '/processed_data/fold' + str(x+1) + '/querygraph_graph' + str(graph) + '.fasta.search'
+                graphname = datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + '/querygraph_graph' + str(graph) + '.fasta.search'
                 with open(graphname, 'r') as f:
                     for l in f:
                             temp = str.split(l)
@@ -115,6 +115,6 @@ def build_folds(datadir):
                             newf.write(seqs + '\n')
                             lines += 1
                 """
-            torch.save(donegraphs, datadir + '/processed_data/fold' + str(x+1) + 'dataset.pkl')
+            torch.save(donegraphs, datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + 'dataset.pkl')
             #torch.save(shufgraphs, datadir + '/processed_data/fold' + str(x+1) + 'shufdataset.pkl')
     return datadir

@@ -39,7 +39,7 @@ def get_kmer_counts(filename, num_cols, col_index, datadir):
     """
     #count each kmer that exists, look into jellyfish doing this for us, collect the highest freq kmers?
     genome_row = np.zeros((num_cols), dtype=np.dtype('uint8'))
-    presence_row = np.zeros((num_cols), dtype=np.dtype('uint8'))
+    #presence_row = np.zeros((num_cols), dtype=np.dtype('uint8'))
     append = datadir + filename
     #Same method used in Computational-pathogens/acheron
     with open(append) as f:
@@ -53,12 +53,13 @@ def get_kmer_counts(filename, num_cols, col_index, datadir):
                 print(filename)
             index = col_index[seq]
             genome_row[index] = kmercount
+            """
             if kmercount > 0:
                 presence_row[index] = 1
             else:
                 presence_row[index] = 0
-
-    return genome_row, presence_row
+            """
+    return genome_row
 
 def build_matrix(datadir, dname):
     """
@@ -117,23 +118,23 @@ def build_matrix(datadir, dname):
         numcols = i
         numrows = len(x)
         kmer_matrix = np.zeros((numrows,numcols),dtype=np.dtype('uint8'))
-        pres_matrix = np.zeros((numrows,numcols),dtype=np.dtype('uint8'))
+        #pres_matrix = np.zeros((numrows,numcols),dtype=np.dtype('uint8'))
         rowindex = 0
-        with ProcessPoolExecutor(max_workers=None) as ppe:
-            for row, pres in ppe.map(get_kmer_counts, files, itertools.repeat(numcols), itertools.repeat(cols), itertools.repeat(datadir)):
+        with ProcessPoolExecutor(max_workers=32) as ppe:
+            for row in ppe.map(get_kmer_counts, files, itertools.repeat(numcols), itertools.repeat(cols), itertools.repeat(datadir)):
                 rows[rowindex] = rowindex
                 kmer_matrix[rowindex,:] = row
-                pres_matrix[rowindex,:] = pres
+                #pres_matrix[rowindex,:] = pres
                 rowindex += 1
         
         matrixdf = pd.DataFrame(kmer_matrix, columns=cols.keys())
         saves = datadir + '/processed_data/' + str(dname) + '_features.pkl'
         matrixdf.to_pickle(saves)
-        presdf = pd.DataFrame(pres_matrix, columns=cols.keys())
+        #presdf = pd.DataFrame(pres_matrix, columns=cols.keys())
         pressaves = datadir + '/processed_data/' + str(dname) + '_featurespresence.pkl'
-        presdf.to_pickle(pressaves)
+        #presdf.to_pickle(pressaves)
         
-        colsums = presdf.sum(axis=0)
+        colsums = matrixdf.sum(axis=0)
         filtered = []
         for c,s in colsums.items():
             if s >= 5 and s < (numrows-5):
@@ -141,7 +142,6 @@ def build_matrix(datadir, dname):
         filtersaves = datadir + '/processed_data/' + str(dname) + '_featuresfiltered.pkl'
         filtereddf = matrixdf.filter(filtered, axis=1)
         filtereddf.to_pickle(filtersaves)
-        filtereddf.to_feather('filteredunitigs.feather')
     return datadir
 
 

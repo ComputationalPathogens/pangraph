@@ -33,4 +33,6 @@ def create(datadir, dname):
     plt.legend(handles, lut, title='Species',
                bbox_to_anchor=(1, 1), bbox_transform=plt.gcf().transFigure, loc='upper right')
     
+create('/home/liam/Phylogeny','flaviv')
+    
 

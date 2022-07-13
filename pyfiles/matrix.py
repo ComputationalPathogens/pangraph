@@ -37,8 +37,8 @@ def get_kmer_counts(filename, num_cols, col_index, datadir):
 
     """
     #count each kmer that exists, look into jellyfish doing this for us, collect the highest freq kmers?
-    genome_row = np.zeros((num_cols), dtype=np.dtype('uint32'))
-    presence_row = np.zeros((num_cols), dtype=np.dtype('uint32'))
+    genome_row = np.zeros((num_cols), dtype=np.dtype('uint8'))
+    presence_row = np.zeros((num_cols), dtype=np.dtype('uint8'))
     append = datadir + filename
     #Same method used in Computational-pathogens/acheron
     with open(append) as f:
@@ -59,7 +59,7 @@ def get_kmer_counts(filename, num_cols, col_index, datadir):
 
     return genome_row, presence_row
 
-def build_matrix(datadir, filename = '/processed_data/counts.csv'):
+def build_matrix(datadir, dname):
     """
     Parameters
     ----------
@@ -79,9 +79,10 @@ def build_matrix(datadir, filename = '/processed_data/counts.csv'):
     rows = {}
     chars = "ACGT"
 
-    files_path = datadir + filename
+    files_path = datadir + '/processed_data/' + str(dname) + '_counts.csv'
     i = 0
-    if not os.path.isfile(datadir + '/processed_data/features.pkl'):
+    files = get_file_names(files_path)
+    if not os.path.isfile(datadir + '/processed_data/' + str(dname) + '_features.pkl'):
         files = get_file_names(files_path)
         isnum = 0
         for f in files:
@@ -110,12 +111,12 @@ def build_matrix(datadir, filename = '/processed_data/counts.csv'):
 
         
         
-    if not os.path.isfile(datadir + '/processed_data/features.pkl'):
+    if not os.path.isfile(datadir + '/processed_data/' + str(dname) + '_features.pkl'):
         x = np.asarray(files)
         numcols = i
         numrows = len(x)
-        kmer_matrix = np.zeros((numrows,numcols),dtype=np.dtype('uint32'))
-        pres_matrix = np.zeros((numrows,numcols),dtype=np.dtype('uint32'))
+        kmer_matrix = np.zeros((numrows,numcols),dtype=np.dtype('uint8'))
+        pres_matrix = np.zeros((numrows,numcols),dtype=np.dtype('uint8'))
         rowindex = 0
         with ProcessPoolExecutor(max_workers=None) as ppe:
             for row, pres in ppe.map(get_kmer_counts, files, itertools.repeat(numcols), itertools.repeat(cols), itertools.repeat(datadir)):
@@ -125,21 +126,20 @@ def build_matrix(datadir, filename = '/processed_data/counts.csv'):
                 rowindex += 1
         
         matrixdf = pd.DataFrame(kmer_matrix, columns=cols.keys())
-        saves = datadir + '/processed_data/features.pkl'
+        saves = datadir + '/processed_data/' + str(dname) + '_features.pkl'
         matrixdf.to_pickle(saves)
         presdf = pd.DataFrame(pres_matrix, columns=cols.keys())
-        pressaves = datadir + '/processed_data/featurespresence.pkl'
+        pressaves = datadir + '/processed_data/' + str(dname) + '_featurespresence.pkl'
         presdf.to_pickle(pressaves)
         
         colsums = presdf.sum(axis=0)
         filtered = []
         for c,s in colsums.items():
-            if s >= 5 and s < numrows-5:
+            if s >= 5 and s < (numrows-5):
                 filtered.append(c)
-        filtersaves = datadir + '/processed_data/featuresfiltered.pkl'
+        filtersaves = datadir + '/processed_data/' + str(dname) + '_featuresfiltered.pkl'
         filtereddf = matrixdf.filter(filtered, axis=1)
         filtereddf.to_pickle(filtersaves)
-        filtereddf.to_feather('filteredunitigs.feather')
     return datadir
 
 

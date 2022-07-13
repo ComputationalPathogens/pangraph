@@ -4,10 +4,10 @@ import ast
 import scipy.cluster
 from sklearn.feature_selection import SelectKBest, f_classif
 
-def build_data(datadir):
-    data = pd.read_pickle(datadir + '/processed_data/featuresfiltered.pkl')
+def build_data(datadir,dname):
+    data = pd.read_pickle(datadir + '/processed_data/' + str(dname) + '_featuresfiltered.pkl')
     colnames = ['id','assembly','genus','species','seqfile','cntfile','meta']
-    metadata = pd.read_csv(datadir+'/processed_data/counts.csv', names=colnames)
+    metadata = pd.read_csv(datadir+'/processed_data/' + str(dname) + '_counts.csv', names=colnames)
     labels = metadata.species.tolist()
     """
     sk_obj = VarianceThreshold(threshold=0.75)
@@ -43,22 +43,20 @@ def kmeans(data, k):
     
     return clusters
 
-def comp_clusters(datadir, numclust):
+def comp_clusters(datadir, numclust,dname):
     sys.setrecursionlimit(100000)
     data,meta = build_data(datadir)
-      
     print("Starting kClustering")
     kClust = kmeans(data,numclust)    
     with open(datadir + '/processed_data/kclust.txt', 'w') as f:        
         for h in kClust:
             f.write('Kmeans Cluster #' + str(h) + '\n')
     print("Starting hClustering")
-    hClust = hierarchal(data, numclust)
-    
+    hClust = hierarchal(data, numclust) 
     with open(datadir + '/processed_data/hclust.txt', 'w') as f:        
         for h in hClust:
             f.write('Hierarchal Cluster #' + str(h) + '\n')
 
     
 
-comp_clusters('/home/liam/Phylogeny', 10)
+comp_clusters('/home/liam/Phylogeny', 10, 'flaviv')
