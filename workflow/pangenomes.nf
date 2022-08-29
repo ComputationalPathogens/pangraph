@@ -4,6 +4,7 @@ process PANGENOMES {
 	input:
 	  val(datadir)
 	  val(dname)
+          val(bifrost)
 	  
 	output:
 	  val(datadir)
@@ -15,7 +16,7 @@ process PANGENOMES {
 	sys.path.append("$baseDir")
 	from pyfiles import pangenomes
 	data = "$datadir"
-	out = pangenomes.pangenomes(data, "$dname")
+	out = pangenomes.pangenomes(data, "$dname", "$bifrost")
 	print(out, end = '')
 	"""
 }

@@ -8,6 +8,8 @@ params.metapth = ""
 params.customtargets = false
 params.customtargetspath = ""
 params.dname = ""
+params.bifrost = ""
+params.blastfrost = ""
 
 nextflow.enable.dsl = 2
 
@@ -31,10 +33,10 @@ workflow {
     if (params.customtargets == true) {
         CUSTOMTARGETS(METADATA.out,params.customtargetspath, params.dname)
     }
-    PANGENOMES(METADATA.out, params.dname)
+    PANGENOMES(METADATA.out, params.dname, params.bifrost)
     MAKEGRAPHS(PANGENOMES.out, params.dname)
     MAKEFASTA(MAKEGRAPHS.out, params.dname)
-    QUERY(MAKEFASTA.out, params.dname)
+    QUERY(MAKEFASTA.out, params.dname,params.blastfrost)
     DATASET(QUERY.out, params.dname)
     MODEL(DATASET.out, params.meta, params.metapth, params.dname)
     }

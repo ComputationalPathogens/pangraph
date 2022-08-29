@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import subprocess
 
-def query(datadir, dname):
+def query(datadir, dname, blastfrost):
     ####
     # Building the commands for querying the pangenome graphs with the .fasta of indivudal graphs
     # Queries are done using BlastFrost (longest part of strategy, look for optimizations here)
@@ -21,7 +21,7 @@ def query(datadir, dname):
             os.mkdir(mkpth)
         except:
             pass
-        cmd = '/home/liam/BlastFrost/build/BlastFrost -g ' + datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + '.gfa -f ' + datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + '.bfg_colors '
+        cmd = blastfrost + ' -g ' + datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + '.gfa -f ' + datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + '.bfg_colors '
         flags = '-o ' + datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + '/querygraph -d -t 128 -s 5.1 -v'
         pths = ""
         filecnt = 0

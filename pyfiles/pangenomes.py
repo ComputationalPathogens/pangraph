@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
 
-def pangenomes(datadir, dname):
+def pangenomes(datadir, dname, bifrost):
     
     ####
     #Skip this step if all 5 folds have already been created, need to do this so graph splits don't get re-done every time
@@ -46,7 +46,7 @@ def pangenomes(datadir, dname):
         with open(writepth, 'w') as f:
             for index in g:
                 f.write(datadir + paths[index] + '\n')
-        cmd = '/home/liam/bifrost/bifrost/build/src/Bifrost build -r ' + writepth + ' -o ' + datadir + '/processed_data/' + str(dname) + '_fold' + str(ind) + ' -t 128 -c'
+        cmd = bifrost + ' build -r ' + writepth + ' -o ' + datadir + '/processed_data/' + str(dname) + '_fold' + str(ind) + ' -t 128 -c'
         os.system(cmd)
     
     
