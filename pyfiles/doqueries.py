@@ -2,6 +2,7 @@ import os
 import sys
 import pandas as pd
 import numpy as np
+import subprocess
 
 def query(datadir, dname):
     ####
@@ -18,26 +19,42 @@ def query(datadir, dname):
         try:
             mkpth = datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + '/'
             os.mkdir(mkpth)
-        except OSError:
+        except:
             pass
+        cmd = '/home/liam/BlastFrost/build/BlastFrost -g ' + datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + '.gfa -f ' + datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + '.bfg_colors '
+        flags = '-o ' + datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + '/querygraph -d -t 128 -s 5.1 -v'
         pths = ""
+        filecnt = 0
         for g in splits[0][x]:
             if os.path.isfile(datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + '/querygraph_graph' + str(g) + '.fasta.search'):
                 continue
             pths += ('-q ' + datadir + '/processed_data/' + str(dname) + '_fasta/graph' + str(g) + '.fasta ')
-        cmd = '/home/liam/BlastFrost/build/BlastFrost -g ' + datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + '.gfa -f ' + datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + '.bfg_colors '
-        flags = '-o ' + datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + '/querygraph -d -t 128 -s 5.1 -v'
+            filecnt += 1
+            if filecnt == 500:
+                full = cmd + pths + flags
+                if pths != "":
+                    subprocess.call(full,shell=True)
+                pths = ""
+                filecnt = 0
         full = cmd + pths + flags
         if pths != "":
-            os.system(full)
+            subprocess.call(full,shell=True)
         pths = ""
+        filecnt = 0
         for g in splits[2][x]:
             if os.path.isfile(datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + '/querygraph_graph' + str(g) + '.fasta.search'):
                 continue
             pths += ('-q ' + datadir + '/processed_data/' + str(dname) + '_fasta/graph' + str(g) + '.fasta ')
+            filecnt += 1
+            if filecnt == 500:
+                full = cmd + pths + flags
+                if pths != "":
+                    subprocess.call(full,shell=True)
+                pths = ""
+                filecnt = 0
         full = cmd + pths + flags
         if pths != "":
-            os.system(full)
+            subprocess.call(full,shell=True)
         pths = ""
 
     return datadir

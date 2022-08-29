@@ -3,6 +3,7 @@ process MAKEFASTA {
     echo true
 	input:
 	  val(datadir)
+          val(dname)
 
 	output:
 	  val(datadir)
@@ -14,7 +15,7 @@ import sys
 sys.path.append("$baseDir")
 from pyfiles import makefasta
 data = "$datadir"
-out = makefasta.create(data)
+out = makefasta.create(data,"$dname")
 print(out, end = '')
 	"""
 }

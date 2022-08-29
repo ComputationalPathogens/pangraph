@@ -99,7 +99,10 @@ def build(datadir, meta, metapth, dname):
         specdict[s] = enc
         indspec[enc] = s
         enc += 1
-    
+
+    #labels_unencoded.append('rev_betacorona')
+    #specdict['rev_betacorona'] = enc
+    #indspec[enc] = s
     predictdict = {}
     graphpredicts = {}
     print("NUMCLASSES:%i" % (enc))
@@ -119,8 +122,9 @@ def build(datadir, meta, metapth, dname):
         print("Fold#: ", str(fold), datetime.now())
         donegraphs = torch.load(datadir + '/processed_data/' + str(dname) + '_fold' + str(fold+1) + 'dataset.pkl')
         featuresize = len(donegraphs[0]['x'][0])
+        meta = False
         if meta:
-            metagraphs = torch.load(datadir + '/processed_data/' + metapth + 'fold' + str(fold+1) + 'dataset.pkl')
+            metagraphs = torch.load(datadir + '/processed_data/' + str(dname) + '_fold' + str(fold+1) + 'shufdataset.pkl')
         model = SAGPool(3, 512, enc, featuresize)
         train_data = []
         test_data = []
@@ -142,7 +146,15 @@ def build(datadir, meta, metapth, dname):
                 train_data.append(g)
             else:
                 test_data.append(g)
-                
+        """
+        x = 0 
+        for g in metagraphs:
+            if x % 2 == 0:
+                train_data.append(g)
+            else:
+                test_data.append(g)
+            x += 1
+        """
         ####
         # Seperating graphs we want feature importance for
         ####
@@ -243,6 +255,7 @@ def build(datadir, meta, metapth, dname):
         ####
         # Applying model to regular testing set
         ####
+        wrongpred = []
         for d in xtest:
             ytrue.append(d.y[0].item())
             d = d.to(device)
@@ -259,16 +272,20 @@ def build(datadir, meta, metapth, dname):
             else:
                 graphpredicts[d.graphind.item()].append(pred[0].item())
             if pred[0].item() != d.y[0].item():
+                wrongpred.append('Truth: ' + str(pred[0].item()) + ' Pred: ' + str(d.y[0].item()))
                 if d.y[0].item() not in wrongdict:
                     wrongdict[d.y[0].item()] = 1
                 else:
                     wrongdict[d.y[0].item()] += 1
             correct += pred.eq(d.y).sum().item()
+        with open(datadir + '/processed_data/' + str(dname) + '_' + str(ind) + 'wrongpred.txt', 'w') as f:
+            for wr in wrongpred:
+                f.write(wr + '\n')
         accuracy = accuracy_score(ytrue, ypred)
         prec_recall = precision_recall_fscore_support(ytrue,ypred)
         prec_recall = np.transpose(prec_recall)
         prec_recall = pd.DataFrame(data=prec_recall, index=labels_unencoded, columns=['Precision','Recall','F-Score','Supports'])
-        model_report = datadir + '/processed_data/' + str(dname) + '_' + str(ind) + 'summary.csv'
+        model_report = datadir + '/processed_data/' + str(dname) + '_' + str(ind) + 'graphsummary.csv'
         print(model_report)
         print(prec_recall)
         prec_recall.to_csv(model_report)

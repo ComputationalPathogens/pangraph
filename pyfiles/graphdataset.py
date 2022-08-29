@@ -92,9 +92,10 @@ def build_folds(datadir, dname):
                 data = Data(x=feat, edge_index=edge_index, y=y)
                 data.graphind = int(graph)
                 donegraphs.append(data)
-                """
+                
                 #Code for shuffled species experiment
-                if species[graph] == 'melitensis':
+                """
+                if species[graph] == 'Betacoronavirus 1':
                     alty = np.zeros(1,dtype=np.float32)
                     alty[0] = enc
                     alty = torch.tensor(alty, dtype=torch.long)
@@ -108,7 +109,7 @@ def build_folds(datadir, dname):
                     altdata.graphind = len(species) + newgraphc
                     newgraphc += 1
                     shufgraphs.append(altdata)
-                    with open(datadir + '/processed_data/shuffled/graph' + str(int(altdata.graphind)) + '.fasta', 'w') as newf:
+                    with open(datadir + '/processed_data/shuffled/' + str(dname) + '_graph' + str(int(altdata.graphind)) + '.fasta', 'w') as newf:
                         lines = 0
                         for seqs in graphseqs:
                             newf.write('>' + str(lines) + '\n')
@@ -116,5 +117,5 @@ def build_folds(datadir, dname):
                             lines += 1
                 """
             torch.save(donegraphs, datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + 'dataset.pkl')
-            #torch.save(shufgraphs, datadir + '/processed_data/fold' + str(x+1) + 'shufdataset.pkl')
+            #torch.save(shufgraphs, datadir + '/processed_data/' + str(dname) + '_fold' + str(x+1) + 'shufdataset.pkl')
     return datadir

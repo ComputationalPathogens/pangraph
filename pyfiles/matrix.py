@@ -82,7 +82,7 @@ def build_matrix(datadir, dname):
     files_path = datadir + '/processed_data/' + str(dname) + '_counts.csv'
     i = 0
     files = get_file_names(files_path)
-    if not os.path.isfile(datadir + '/processed_data/' + str(dname) + '_features.pkl'):
+    if not os.path.isfile(datadir + '/processed_data/' + str(dname) + '_featuresfiltered.pkl'):
         files = get_file_names(files_path)
         isnum = 0
         for f in files:
@@ -111,7 +111,7 @@ def build_matrix(datadir, dname):
 
         
         
-    if not os.path.isfile(datadir + '/processed_data/' + str(dname) + '_features.pkl'):
+    if not os.path.isfile(datadir + '/processed_data/' + str(dname) + '_featuresfiltered.pkl'):
         x = np.asarray(files)
         numcols = i
         numrows = len(x)

@@ -1,10 +1,8 @@
 #!/usr/bin/env nextflow
-params.genera = "Bacillus anthracis"
+params.genera = "Brucella"
 params.download = false
-params.model = "xgb"
 params.k = 5
 params.datadir = "$baseDir"
-params.ksize = 11
 params.meta = false
 params.metapth = ""
 params.customtargets = false
@@ -21,7 +19,7 @@ include { QUERY } from './workflow/query'
 include { PANGENOMES } from './workflow/pangenomes'
 include { DATASET } from './workflow/dataset'
 include { MODEL } from './workflow/model'
-include { CUSTOMTARGETS } './workflow/customtargets'
+include { CUSTOMTARGETS } from './workflow/customtargets'
 
 workflow {
 	if(params.download == true) {

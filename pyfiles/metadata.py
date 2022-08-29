@@ -72,9 +72,18 @@ def build_metadata(datadir, dname):
                     species = "unknown"
                 for l in lines[2:]:
                     if meta.search(l):
-                        metadict[str(meta.search(l)[0])] = str(re.split(': +', str(meta.split(l)[1]))[1])[:-1]                 
+                        metadict[str(meta.search(l)[0])] = str(re.split(': +', str(meta.split(l)[1]))[1])[:-1]
+            if ext == ".meta":
+                fp = subdir + '/' + file
+                with open(fp, 'r') as f:
+                    lines = f.readlines()
+                assembly = lines[0].strip()
+                species = lines[1].strip()
+                genus = lines[2].strip()
+
         if id > -1:
-            writer.writerow([id, assembly, genus, species, pth, cnt, metadict])
+            if pth != 'empty':
+                writer.writerow([id, assembly, genus, species, pth, cnt, metadict])
         id += 1
 
     return datadir
@@ -110,7 +119,7 @@ def clean_outliers(k, datadir, dname):
     for index, row in data2.iterrows():
         if row['species'] == 'unknown' and row['genus'] == 'Brucella':
             brucunknown.append(row['seqfile'])
-        if count[row['species']] < 10 or row['species'] == 'unknown':
+        if count[row['species']] < 25 or row['species'] == 'unknown':
             data2.drop(index, axis=0, inplace=True)
     data2.reset_index(drop=True,inplace=True)
     newinds = []

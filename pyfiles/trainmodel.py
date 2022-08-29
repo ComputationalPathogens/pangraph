@@ -39,7 +39,7 @@ def load_data(dataloc, dname):
         enc += 1
     for l in labels:
         encoded.append(specdict[l])
-        
+    print(specdict)
     return data, encoded, labels_unencoded
 
 
@@ -51,10 +51,10 @@ def train_model(k, features, labels, unencoded_labels, save, datadir, dname):
     params - model parameters
     save - true to save models, false if not saving, also saves test data fold for accompanying model
     """
-    params = {'objective':'multi:softmax', 'num_class': '11', 'max_depth': '12'}
+    params = {'objective':'multi:softmax', 'num_class': '20', 'max_depth': '12'}
     splits = np.load(datadir + '/processed_data/' + str(dname) + '_foldsplits.npy', allow_pickle=True)
     count = 0
-    num_feats = 2000000
+    num_feats = 1000000
     final_models = []
     final_features = []
     final_labels = []
@@ -65,7 +65,7 @@ def train_model(k, features, labels, unencoded_labels, save, datadir, dname):
         count+=1
         combinesplits = [*splits[0][x], *splits[1][x]]
         testsplits = [*splits[2][x]]
-        sk_obj = SelectKBest(f_classif, k=num_feats)
+        sk_obj = SelectKBest(f_classif, k='all')
         print(combinesplits)
         print(testsplits)
         print(features)
@@ -107,8 +107,12 @@ def test_model(final_models, final_features, final_labels, labels_unencoded, dat
         accuracy = accuracy_score(ytest, prediction)
         prec_recall = precision_recall_fscore_support(ytest, prediction, average=None)
         prec_recall = np.transpose(prec_recall)
-        prec_recall = pd.DataFrame(data=prec_recall, index=labels_unencoded, columns=['Precision','Recall','F-Score','Supports'])
-        model_report = datadir + '/processed_data/' + str(dname) + '_' + str(count) + 'summary.csv'
+        print(prec_recall)
+        indices = []
+        for ind in range(len(prec_recall)):
+            indices.append(ind)
+        prec_recall = pd.DataFrame(data=prec_recall, index=indices, columns=['Precision','Recall','F-Score','Supports'])
+        model_report = datadir + '/processed_data/' + str(dname) + '_' + str(count) + 'xgbsummary.csv'
         prec_recall.to_csv(model_report)
         print(accuracy)
         print(prec_recall)

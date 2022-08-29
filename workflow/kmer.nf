@@ -15,7 +15,7 @@ process KMERCOUNT {
 	sys.path.append("$baseDir/pyfiles/")
 	import kmer
 
-	out = kmer.count_kmer("$datadir", "$dname")
+	out = kmer.count_kmer("$datadir", 31,"$dname")
 	print(out, end = '')
 	"""
 }

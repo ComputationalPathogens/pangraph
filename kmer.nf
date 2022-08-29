@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 params.genera = "Brucella,Ochrobactrum,Agrobacterium"
-params.download = true
+params.download = false
 params.model = "xgb"
 params.k = 5
 params.datadir = "$baseDir"
@@ -16,7 +16,7 @@ include { METADATA } from './workflow/metadata'
 include { FEATURES } from './workflow/features'
 include { TRAIN } from './workflow/train'
 include { DOWNLOAD } from './workflow/download'
-include { CUSTOMTARGETS } './workflow/customtargets'
+include { CUSTOMTARGETS } from './workflow/customtargets'
 
 workflow {
 	if(params.download == true) {

@@ -18,7 +18,7 @@ def count_kmer(rootdir, ksize = 31, dname = 'none'):
 
     """
     #Could potentially be done with multiprocessing instead although this doesnt take much time anyway
-    filepath = rootdir + '/processed_data/' + str(dname) + '_metadata.csv'
+    filepath = rootdir + '/processed_data/' + str(dname) + '_clean.csv'
     colnames = ['id', 'assembly', 'genus', 'species', 'seqfile', 'cntfile', 'meta']
     dumpname = 'mer_counts_dumpsbf.fa'
 
