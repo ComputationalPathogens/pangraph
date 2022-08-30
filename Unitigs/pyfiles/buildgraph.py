@@ -5,7 +5,7 @@ import re
 
 
 
-def build_index(datadir, dname):
+def build_index(datadir, dname, bifrost, blastfrost):
 
     """
     Parameters
@@ -86,8 +86,8 @@ def build_index(datadir, dname):
     with open(samplespth, 'w') as f:
         for sample in paths:
             f.write(datadir + sample + '\n')
-    cmd = '/home/liam/bifrost/bifrost/build/src/Bifrost build -r ' + samplespth + ' -o ' + datadir + '/processed_data/' + str(dname) + '_graph' + ' -t 128 -c'
+    cmd = bifrost + ' build -r ' + samplespth + ' -o ' + datadir + '/processed_data/' + str(dname) + '_graph' + ' -t 128 -c'
     os.system(cmd)
-    cmd = '/home/liam/BlastFrost/build/BlastFrost -g ' + datadir + '/processed_data/' + str(dname) + '_graph.gfa -f ' + datadir + '/processed_data/' + str(dname) + '_graph.bfg_colors -c'
+    cmd = blastfrost + ' -g ' + datadir + '/processed_data/' + str(dname) + '_graph.gfa -f ' + datadir + '/processed_data/' + str(dname) + '_graph.bfg_colors -c'
     os.system(cmd)
     return datadir

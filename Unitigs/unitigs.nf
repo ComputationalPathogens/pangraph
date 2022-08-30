@@ -4,6 +4,8 @@ params.virus = false
 params.virusfile = ''
 params.plot = false
 params.dname = 'coronavirus'
+params.bifrost = ''
+params.blastfrost = ''
 
 nextflow.enable.dsl = 2
 
@@ -14,9 +16,9 @@ include { UNITIGS } from './workflow/getunitigs'
 workflow {
     if (params.virus == true) {
         SEPERATE(params.datadir, params.virusfile, params.dname)
-        GRAPH(SEPERATE.out, params.dname)
+        GRAPH(SEPERATE.out, params.dname, params.bifrost, params.blastfrost)
     } else {
-        GRAPH(params.datadir, params.dname)
+        GRAPH(params.datadir, params.dname, params.bifrost, params.blastfrost)
     }
     UNITIGS(GRAPH.out, params.dname)
 }
